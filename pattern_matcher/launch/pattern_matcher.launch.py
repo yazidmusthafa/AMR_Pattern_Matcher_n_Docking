@@ -13,7 +13,9 @@ from launch_ros.parameter_descriptions import ParameterValue
 
 def generate_launch_description():
     # Directories for included launch files
-    turtlebot3_gazebo_dir = get_package_share_directory('turtlebot3_gazebo')
+    config_dir = os.path.join(get_package_share_directory('navigation_tb3'),'config')
+    map_file = os.path.join(config_dir,'tb3_map.yaml')
+    param_file = os.path.join(config_dir,'tb3_nav2_params.yaml')
 
     package_path = os.path.join(
         get_package_share_directory('pattern_matcher'))
@@ -30,6 +32,14 @@ def generate_launch_description():
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource([os.path.join(
             get_package_share_directory('turtlebot3_gazebo'), 'launch'), '/turtlebot3_world.launch.py'])
+        ),
+
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource([get_package_share_directory('nav2_bringup'),'/launch','/bringup_launch.py']),
+            launch_arguments={
+            'map':map_file,
+            'params_file': param_file}.items(),
+
         ),
         
         # Pattern model description parameter

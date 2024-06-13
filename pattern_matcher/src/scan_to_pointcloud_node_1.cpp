@@ -10,9 +10,6 @@
 #include <pcl/registration/icp.h>
 #include <pcl/common/transforms.h>
 #include <pcl/search/kdtree.h>
-#include <tf2_ros/transform_broadcaster.h>
-#include <geometry_msgs/msg/transform_stamped.hpp>
-#include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
 #include <cmath>
 #include <vector>
 #include <array>
@@ -36,38 +33,11 @@ public:
             "/scan", 10, std::bind(&ScanToPointCloudNode::scanCallback, this, std::placeholders::_1));
         pc_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("/scan/pointcloud", 10);
         pattern_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("/scan/pattern_matched", 10);
-        initial_pose = this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("/initialpose", 10);
-
-        
-
-        tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(this);
     }
 
 private:
     void scanCallback(const sensor_msgs::msg::LaserScan::SharedPtr scan_msg)
     {
-
-        // position:
-//         x: -0.019896335899829865
-//         y: -0.008730143308639526
-//         z: 0.0
-//         orientation:
-//         x: 0.0
-//         y: 0.0
-//         z: 0.001917961825328816
-//         w: 0.9999981607095269
-        geometry_msgs::msg::PoseWithCovarianceStamped init_pose;       // Try top make it automatically taking the transform of the robot base link
-        init_pose.header.frame_id = "map";
-        init_pose.pose.pose.position.x = -0.019896335899829865;
-        init_pose.pose.pose.position.x = -0.008730143308639526;
-        init_pose.pose.pose.position.x = 0.0;
-        init_pose.pose.pose.orientation.x = 0.0;
-        init_pose.pose.pose.orientation.y = 0.0;
-        init_pose.pose.pose.orientation.z = 0.001917961825328816;
-        init_pose.pose.pose.orientation.x = 1.0;
-        initial_pose->publish(init_pose);
-
-
         pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
 
         // Convert LaserScan to PointCloud
@@ -86,11 +56,15 @@ private:
         }
 
         // Perform Euclidean Clustering
+        // pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>);
+        // tree->setInputCloud(cloud);
+
         std::vector<pcl::PointIndices> cluster_indices;
         pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
         ec.setClusterTolerance(0.07); 
         ec.setMinClusterSize(20);
         ec.setMaxClusterSize(500);
+        // ec.setSearchMethod(tree);
         ec.setInputCloud(cloud);
         ec.extract(cluster_indices);
 
@@ -144,103 +118,48 @@ private:
 
             if (cloud_cluster->points.size() < 90){
 
-                // Perform ICP for pattern matching
-                pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
-                icp.setInputSource(pattern_cloud_);
-                icp.setInputTarget(cloud_cluster);
-                icp.setMaximumIterations(500); // Increase iterations for better convergence
-                pcl::PointCloud<pcl::PointXYZ> Final;
-                icp.align(Final);
+            // Perform ICP for pattern matching
+            pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
+            icp.setInputSource(pattern_cloud_);
+            icp.setInputTarget(cloud_cluster);
+            // icp.setMaxCorrespondenceDistance(0.5); // Smaller distance for more precise matching
+            icp.setMaximumIterations(500);          // Increase iterations for better convergence
+            pcl::PointCloud<pcl::PointXYZ> Final;
+            icp.align(Final);
 
-                if (icp.hasConverged() && icp.getFitnessScore() < 0.000282)
-                {
-                    pattern_matched = true;
-                    best_transformation = icp.getFinalTransformation();
-                    // break; // Stop after finding the first match
-                }
-            
+            // RCLCPP_INFO(this->get_logger(), "Cload POint Size: ******* %zu *******", cloud_cluster->points.size());
+
+            if (icp.hasConverged() && icp.getFitnessScore() < 0.000282)
+            {
+                pattern_matched = true;
+                best_transformation = icp.getFinalTransformation();
+                // break; // Stop after finding the first match
+            }
         
 
-        if (pattern_matched)
-        {
-            // Transform pattern point cloud to match the detected location
-            pcl::PointCloud<pcl::PointXYZ>::Ptr transformed_pattern(new pcl::PointCloud<pcl::PointXYZ>);
-            pcl::transformPointCloud(*pattern_cloud_, *transformed_pattern, best_transformation);
+            if (pattern_matched)
+            {
+                // Transform pattern point cloud to match the detected location
+                pcl::PointCloud<pcl::PointXYZ>::Ptr transformed_pattern(new pcl::PointCloud<pcl::PointXYZ>);
+                pcl::transformPointCloud(*pattern_cloud_, *transformed_pattern, best_transformation);
 
-            // Publish the matched pattern point cloud
-            sensor_msgs::msg::PointCloud2 pattern_output;
-            pcl::toROSMsg(*transformed_pattern, pattern_output);
-            pattern_output.header = scan_msg->header;
-            pattern_pub_->publish(pattern_output);
+                // RCLCPP_INFO(this->get_logger(), "Cload POint Size: ******* %zu *******", transformed_pattern);
 
-            // RCLCPP_INFO(this->get_logger(), "Transformation Matrix:");
-            // for (int i = 0; i < 4; ++i)
-            // {
-            //     RCLCPP_INFO(this->get_logger(), "[%f, %f, %f, %f]",
-            //                 best_transformation(i, 0), best_transformation(i, 1), 
-            //                 best_transformation(i, 2), best_transformation(i, 3));
-            // }
-
-
-            // Broadcast the transform
-            geometry_msgs::msg::TransformStamped transform_stamped;
-            transform_stamped.header.stamp = this->now();
-            transform_stamped.header.frame_id = "base_link"; // Adjust the frame according to your setup
-            transform_stamped.child_frame_id = "pattern_frame";
-            transform_stamped.transform.translation.x = best_transformation(0, 3);
-            transform_stamped.transform.translation.y = best_transformation(1, 3);
-            transform_stamped.transform.translation.z = best_transformation(2, 3);
-
-            Eigen::Quaternionf q(best_transformation.block<3, 3>(0, 0));
-            transform_stamped.transform.rotation.x = q.x();
-            transform_stamped.transform.rotation.y = q.y();
-            transform_stamped.transform.rotation.z = q.z();
-            transform_stamped.transform.rotation.w = q.w();
-
-            tf_broadcaster_->sendTransform(transform_stamped);
-            
-            // ros2 topic echo /tf | grep -B 4 -A 12 "child_frame_id: pattern_frame"
-
-            //   pose:
-            //     position:
-            //     x: 0.8804495334625244
-            //     y: -0.022220879793167114
-            //     z: 0.0
-            //     orientation:
-            //     x: 0.0
-            //     y: 0.0
-            //     z: -0.014410376820957797
-            //     w: 0.9998961651290988
-
-
-
-            // Initial Pose
-            //   frame_id: map
-            //     pose:
-            //         position:
-            //         x: -0.019896335899829865
-            //         y: -0.008730143308639526
-            //         z: 0.0
-            //         orientation:
-            //         x: 0.0
-            //         y: 0.0
-            //         z: 0.001917961825328816
-            //         w: 0.9999981607095269
-
-
+                // Publish the matched pattern point cloud
+                sensor_msgs::msg::PointCloud2 pattern_output;
+                pcl::toROSMsg(*transformed_pattern, pattern_output);
+                pattern_output.header = scan_msg->header;
+                pattern_pub_->publish(pattern_output);
+            }
+            }
 
         }
-        }
-    }
-        
     }
 
     rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr scan_sub_;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pc_pub_;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pattern_pub_;
-    rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr initial_pose;
     pcl::PointCloud<pcl::PointXYZ>::Ptr pattern_cloud_ = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>);
-    std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
 };
 
 int main(int argc, char **argv)

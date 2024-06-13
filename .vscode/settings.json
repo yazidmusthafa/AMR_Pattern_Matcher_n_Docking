@@ -1,0 +1,28 @@
+{
+    "python.autoComplete.extraPaths": [
+        "/home/yazid_musthafa/turtlebot3_ws/install/robot_math/lib/python3.10/site-packages",
+        "/home/yazid_musthafa/turtlebot3_ws/install/navigation_tb3/local/lib/python3.10/dist-packages",
+        "/home/yazid_musthafa/ws_moveit/install/moveit_task_constructor_msgs/local/lib/python3.10/dist-packages",
+        "/home/yazid_musthafa/ws_moveit/install/moveit_py/local/lib/python3.10/dist-packages",
+        "/home/yazid_musthafa/ws_moveit/install/moveit_msgs/local/lib/python3.10/dist-packages",
+        "/home/yazid_musthafa/ws_moveit/install/moveit_configs_utils/lib/python3.10/site-packages",
+        "/home/yazid_musthafa/master_client_ws/install/service_client_robo_control/lib/python3.10/site-packages",
+        "/home/yazid_musthafa/master_client_ws/install/robo_control/lib/python3.10/site-packages",
+        "/home/yazid_musthafa/master_client_ws/install/robot_control_interfaces/local/lib/python3.10/dist-packages",
+        "/opt/ros/humble/lib/python3.10/site-packages",
+        "/opt/ros/humble/local/lib/python3.10/dist-packages"
+    ],
+    "python.analysis.extraPaths": [
+        "/home/yazid_musthafa/turtlebot3_ws/install/robot_math/lib/python3.10/site-packages",
+        "/home/yazid_musthafa/turtlebot3_ws/install/navigation_tb3/local/lib/python3.10/dist-packages",
+        "/home/yazid_musthafa/ws_moveit/install/moveit_task_constructor_msgs/local/lib/python3.10/dist-packages",
+        "/home/yazid_musthafa/ws_moveit/install/moveit_py/local/lib/python3.10/dist-packages",
+        "/home/yazid_musthafa/ws_moveit/install/moveit_msgs/local/lib/python3.10/dist-packages",
+        "/home/yazid_musthafa/ws_moveit/install/moveit_configs_utils/lib/python3.10/site-packages",
+        "/home/yazid_musthafa/master_client_ws/install/service_client_robo_control/lib/python3.10/site-packages",
+        "/home/yazid_musthafa/master_client_ws/install/robo_control/lib/python3.10/site-packages",
+        "/home/yazid_musthafa/master_client_ws/install/robot_control_interfaces/local/lib/python3.10/dist-packages",
+        "/opt/ros/humble/lib/python3.10/site-packages",
+        "/opt/ros/humble/local/lib/python3.10/dist-packages"
+    ]
+}
