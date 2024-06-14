@@ -12,7 +12,9 @@
 #include <pcl/search/kdtree.h>
 #include <tf2_ros/transform_broadcaster.h>
 #include <geometry_msgs/msg/transform_stamped.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
+#include <std_msgs/msg/bool.hpp>
 #include <cmath>
 #include <vector>
 #include <array>
@@ -34,38 +36,72 @@ public:
         // Subscriptions and Publishers
         scan_sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
             "/scan", 10, std::bind(&ScanToPointCloudNode::scanCallback, this, std::placeholders::_1));
+        initialize_charging = create_subscription<std_msgs::msg::Bool>(
+            "/initialize_charging", 10, std::bind(&ScanToPointCloudNode::goToCharging, this, std::placeholders::_1));
         pc_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("/scan/pointcloud", 10);
         pattern_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("/scan/pattern_matched", 10);
         initial_pose = this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("/initialpose", 10);
-
-        
+        goal_pose = this->create_publisher<geometry_msgs::msg::PoseStamped>("/goal_pose", 10);
 
         tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(this);
     }
 
 private:
+    void goToCharging(const std_msgs::msg::Bool::SharedPtr x){  
+        
+        //ros2 topic pub --once /initialize_charging std_msgs/msg/Bool data:\ true\ 
+
+        if (x){
+            geometry_msgs::msg::PoseStamped gl_pose;      
+            // position:
+            // x: 0.8804495334625244
+            // y: -0.022220879793167114
+            // z: 0.0
+            // orientation:
+            // x: 0.0
+            // y: 0.0
+            // z: -0.014410376820957797
+            // w: 0.9998961651290988
+            gl_pose.header.frame_id = "map";
+            gl_pose.pose.position.x = 0.8804495334625244;
+            gl_pose.pose.position.y = -0.022220879793167114;
+            gl_pose.pose.position.z = 0.0;
+            gl_pose.pose.orientation.x = 0.0;
+            gl_pose.pose.orientation.y = 0.0;
+            gl_pose.pose.orientation.z = -0.014410376820957797;
+            gl_pose.pose.orientation.w = 1.0;
+            goal_pose->publish(gl_pose);
+        }
+        }
+
     void scanCallback(const sensor_msgs::msg::LaserScan::SharedPtr scan_msg)
     {
 
+        if (initialize == true){
         // position:
-//         x: -0.019896335899829865
-//         y: -0.008730143308639526
-//         z: 0.0
-//         orientation:
-//         x: 0.0
-//         y: 0.0
-//         z: 0.001917961825328816
-//         w: 0.9999981607095269
+        // x: -0.019896335899829865
+        // y: -0.008730143308639526
+        // z: 0.0
+        // orientation:
+        // x: 0.0
+        // y: 0.0
+        // z: 0.001917961825328816
+        // w: 0.9999981607095269
         geometry_msgs::msg::PoseWithCovarianceStamped init_pose;       // Try top make it automatically taking the transform of the robot base link
         init_pose.header.frame_id = "map";
         init_pose.pose.pose.position.x = -0.019896335899829865;
-        init_pose.pose.pose.position.x = -0.008730143308639526;
-        init_pose.pose.pose.position.x = 0.0;
+        init_pose.pose.pose.position.y = -0.008730143308639526;
+        init_pose.pose.pose.position.z = 0.0;
         init_pose.pose.pose.orientation.x = 0.0;
         init_pose.pose.pose.orientation.y = 0.0;
         init_pose.pose.pose.orientation.z = 0.001917961825328816;
-        init_pose.pose.pose.orientation.x = 1.0;
+        init_pose.pose.pose.orientation.w = 1.0;
         initial_pose->publish(init_pose);
+
+        initialize = false;
+        }
+
+         
 
 
         pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
@@ -201,44 +237,19 @@ private:
             
             // ros2 topic echo /tf | grep -B 4 -A 12 "child_frame_id: pattern_frame"
 
-            //   pose:
-            //     position:
-            //     x: 0.8804495334625244
-            //     y: -0.022220879793167114
-            //     z: 0.0
-            //     orientation:
-            //     x: 0.0
-            //     y: 0.0
-            //     z: -0.014410376820957797
-            //     w: 0.9998961651290988
-
-
-
-            // Initial Pose
-            //   frame_id: map
-            //     pose:
-            //         position:
-            //         x: -0.019896335899829865
-            //         y: -0.008730143308639526
-            //         z: 0.0
-            //         orientation:
-            //         x: 0.0
-            //         y: 0.0
-            //         z: 0.001917961825328816
-            //         w: 0.9999981607095269
-
-
-
         }
         }
     }
         
     }
 
+    bool initialize = true;
     rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr scan_sub_;
+    rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr initialize_charging;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pc_pub_;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pattern_pub_;
     rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr initial_pose;
+    rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr goal_pose;
     pcl::PointCloud<pcl::PointXYZ>::Ptr pattern_cloud_ = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>);
     std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
 };

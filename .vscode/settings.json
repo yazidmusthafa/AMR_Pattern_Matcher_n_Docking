@@ -24,5 +24,8 @@
         "/home/yazid_musthafa/master_client_ws/install/robot_control_interfaces/local/lib/python3.10/dist-packages",
         "/opt/ros/humble/lib/python3.10/site-packages",
         "/opt/ros/humble/local/lib/python3.10/dist-packages"
-    ]
+    ],
+    "files.associations": {
+        "random": "cpp"
+    }
 }
