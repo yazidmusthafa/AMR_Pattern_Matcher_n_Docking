@@ -1,4 +1,6 @@
 #include <rclcpp/rclcpp.hpp>
+#include <rclcpp_action/rclcpp_action.hpp>
+#include <rclcpp/parameter_client.hpp>
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include <sensor_msgs/msg/laser_scan.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
@@ -10,14 +12,20 @@
 #include <pcl/registration/icp.h>
 #include <pcl/common/transforms.h>
 #include <pcl/search/kdtree.h>
+#include <pcl/surface/mls.h>
 #include <tf2_ros/transform_broadcaster.h>
 #include <geometry_msgs/msg/transform_stamped.hpp>
+#include <geometry_msgs/msg/twist.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
+#include "nav2_msgs/action/navigate_to_pose.hpp"
 #include <std_msgs/msg/bool.hpp>
 #include <cmath>
 #include <vector>
 #include <array>
+
+using NavigateToPose = nav2_msgs::action::NavigateToPose;
+using GoalHandleNavigateToPose = rclcpp_action::ClientGoalHandle<NavigateToPose>;
 
 class ScanToPointCloudNode : public rclcpp::Node
 {
@@ -41,7 +49,10 @@ public:
         pc_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("/scan/pointcloud", 10);
         pattern_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("/scan/pattern_matched", 10);
         initial_pose = this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("/initialpose", 10);
-        goal_pose = this->create_publisher<geometry_msgs::msg::PoseStamped>("/goal_pose", 10);
+        velocity_pub_ = create_publisher<geometry_msgs::msg::Twist>("/cmd_vel", 1);
+        // goal_pose = this->create_publisher<geometry_msgs::msg::PoseStamped>("/goal_pose", 10);
+        action_client_ = rclcpp_action::create_client<NavigateToPose>(this, "navigate_to_pose");
+        parameter_client_ = std::make_shared<rclcpp::SyncParametersClient>(this, "controller_server");
 
         tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(this);
     }
@@ -52,27 +63,87 @@ private:
         //ros2 topic pub --once /initialize_charging std_msgs/msg/Bool data:\ true\ 
 
         if (x){
+
+            action_client_->wait_for_action_server();
+
             geometry_msgs::msg::PoseStamped gl_pose;      
-            // position:
-            // x: 0.8804495334625244
-            // y: -0.022220879793167114
-            // z: 0.0
-            // orientation:
-            // x: 0.0
-            // y: 0.0
-            // z: -0.014410376820957797
-            // w: 0.9998961651290988
+
             gl_pose.header.frame_id = "map";
-            gl_pose.pose.position.x = 0.8804495334625244;
-            gl_pose.pose.position.y = -0.022220879793167114;
+            gl_pose.pose.position.x = 1.0044224262237549;
+            gl_pose.pose.position.y = -0.048272550106048584;
             gl_pose.pose.position.z = 0.0;
             gl_pose.pose.orientation.x = 0.0;
             gl_pose.pose.orientation.y = 0.0;
-            gl_pose.pose.orientation.z = -0.014410376820957797;
+            gl_pose.pose.orientation.z = -0.03102474584439847;
             gl_pose.pose.orientation.w = 1.0;
-            goal_pose->publish(gl_pose);
+            // goal_pose->publish(gl_pose);
+            goal_msg.pose = gl_pose;
+            
+            auto send_goal_options = rclcpp_action::Client<NavigateToPose>::SendGoalOptions();
+            send_goal_options.result_callback = std::bind(&ScanToPointCloudNode::result_callback, this, std::placeholders::_1);
+            action_client_->async_send_goal(goal_msg, send_goal_options);
+
         }
         }
+    void result_callback(const GoalHandleNavigateToPose::WrappedResult &result)
+    {
+        switch (result.code)
+        {
+        case rclcpp_action::ResultCode::SUCCEEDED:
+            RCLCPP_INFO(get_logger(), "Goal succeeded");
+            if (dock == false){
+
+                action_client_->wait_for_action_server();
+                // parameter_client_->wait_for_service();
+
+                geometry_msgs::msg::PoseStamped dock_pose;
+                
+                dock_pose.header.frame_id = transform_stamped.header.frame_id;
+                dock_pose.pose.position.x = transform_stamped.transform.translation.x;
+                dock_pose.pose.position.y =transform_stamped.transform.translation.y;
+                dock_pose.pose.position.z =transform_stamped.transform.translation.z;
+
+                dock_pose.pose.orientation.x = 0.0;
+                dock_pose.pose.orientation.y = 0.0;
+                dock_pose.pose.orientation.z = 0.0;
+                dock_pose.pose.orientation.w = 1.0;
+
+                goal_msg.pose = dock_pose;
+
+                // parameter_client_->set_parameters({
+                // rclcpp::Parameter("dwb.max_vel_x", 0.02),
+                // rclcpp::Parameter("dwb.max_vel_theta", 0.02)});
+            
+                auto send_goal_options = rclcpp_action::Client<NavigateToPose>::SendGoalOptions();
+                send_goal_options.result_callback = std::bind(&ScanToPointCloudNode::result_callback, this, std::placeholders::_1);
+                action_client_->async_send_goal(goal_msg, send_goal_options);
+
+                dock = true;
+
+            }
+            else{
+
+                // Add blind docking command
+                RCLCPP_INFO(get_logger(), "**************Final Step*************");
+
+                auto msg = geometry_msgs::msg::Twist();
+                msg.linear.x = 0.1;
+                msg.angular.z = 0.0;
+                velocity_pub_->publish(msg);
+
+            }
+            break;
+        case rclcpp_action::ResultCode::ABORTED:
+            RCLCPP_WARN(get_logger(), "Goal aborted");
+            return;
+        case rclcpp_action::ResultCode::CANCELED:
+            RCLCPP_WARN(get_logger(), "Goal canceled");
+            return;
+        default:
+            RCLCPP_ERROR(get_logger(), "Unknown result code");
+            return;
+        }
+    }
 
     void scanCallback(const sensor_msgs::msg::LaserScan::SharedPtr scan_msg)
     {
@@ -101,9 +172,6 @@ private:
         initialize = false;
         }
 
-         
-
-
         pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
 
         // Convert LaserScan to PointCloud
@@ -121,13 +189,25 @@ private:
             angle += scan_msg->angle_increment;
         }
 
+        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_smoothed(new pcl::PointCloud<pcl::PointXYZ>());
+        pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>());
+
+        pcl::MovingLeastSquares<pcl::PointXYZ, pcl::PointXYZ> mls;
+        mls.setComputeNormals(false);
+        mls.setInputCloud(cloud);
+        mls.setPolynomialOrder(2);
+        mls.setSearchMethod(tree);
+        mls.setSearchRadius(0.05);
+
+        mls.process(*cloud_smoothed);
+
         // Perform Euclidean Clustering
         std::vector<pcl::PointIndices> cluster_indices;
         pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
-        ec.setClusterTolerance(0.07); 
+        ec.setClusterTolerance(0.06); 
         ec.setMinClusterSize(20);
-        ec.setMaxClusterSize(500);
-        ec.setInputCloud(cloud);
+        ec.setMaxClusterSize(100);
+        ec.setInputCloud(cloud_smoothed);
         ec.extract(cluster_indices);
 
         // Create PointCloud2 message for publishing
@@ -157,9 +237,9 @@ private:
             {
                 pcl::PointXYZRGB point_rgb;
                 pcl::PointXYZ point;
-                point.x = point_rgb.x = cloud->points[idx].x;
-                point.y = point_rgb.y = cloud->points[idx].y;
-                point.z = point_rgb.z = cloud->points[idx].z;
+                point.x = point_rgb.x = cloud_smoothed->points[idx].x;
+                point.y = point_rgb.y = cloud_smoothed->points[idx].y;
+                point.z = point_rgb.z = cloud_smoothed->points[idx].z;
                 point_rgb.r = r;
                 point_rgb.g = g;
                 point_rgb.b = b;
@@ -188,15 +268,13 @@ private:
                 pcl::PointCloud<pcl::PointXYZ> Final;
                 icp.align(Final);
 
-                if (icp.hasConverged() && icp.getFitnessScore() < 0.000282)
+                if (icp.hasConverged() && icp.getFitnessScore() < 0.00015)
                 {
                     pattern_matched = true;
                     best_transformation = icp.getFinalTransformation();
                     // break; // Stop after finding the first match
                 }
             
-        
-
         if (pattern_matched)
         {
             // Transform pattern point cloud to match the detected location
@@ -219,7 +297,7 @@ private:
 
 
             // Broadcast the transform
-            geometry_msgs::msg::TransformStamped transform_stamped;
+            
             transform_stamped.header.stamp = this->now();
             transform_stamped.header.frame_id = "base_link"; // Adjust the frame according to your setup
             transform_stamped.child_frame_id = "pattern_frame";
@@ -244,8 +322,14 @@ private:
     }
 
     bool initialize = true;
+    bool dock = false;
+    rclcpp_action::Client<NavigateToPose>::SharedPtr action_client_;
+    rclcpp::SyncParametersClient::SharedPtr parameter_client_;
+    NavigateToPose::Goal goal_msg;
+    geometry_msgs::msg::TransformStamped transform_stamped;
     rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr scan_sub_;
     rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr initialize_charging;
+    rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr velocity_pub_;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pc_pub_;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pattern_pub_;
     rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr initial_pose;
