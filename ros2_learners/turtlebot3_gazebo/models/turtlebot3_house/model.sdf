@@ -4160,20 +4160,20 @@
         <collision name='collision'>
           <geometry>
             <mesh>
-              <uri>model://mailbox/meshes/mailbox.dae</uri>
+              <uri>${find mailbox}/meshes/mailbox.dae</uri>
             </mesh>
           </geometry>
         </collision>
         <visual name='visual'>
           <geometry>
             <mesh>
-              <uri>model://mailbox/meshes/mailbox.dae</uri>
+              <uri>${find mailbox}/meshes/mailbox.dae</uri>
             </mesh>
           </geometry>
           <material>
             <script>
-              <uri>model://mailbox/materials/scripts</uri>
-              <uri>model://mailbox/materials/textures</uri>
+              <uri>${find mailbox}/materials/scripts</uri>
+              <uri>${find mailbox}/materials/textures</uri>
               <name>Mailbox/Diffuse</name>
             </script>
           </material>
@@ -5150,7 +5150,7 @@
         <visual name='visual'>
           <geometry>
             <mesh>
-              <uri>model://cafe_table/meshes/cafe_table.dae</uri>
+              <uri>${find cafe_table}/meshes/cafe_table.dae</uri>
             </mesh>
           </geometry>
         </visual>
@@ -5187,7 +5187,7 @@
         <visual name='visual'>
           <geometry>
             <mesh>
-              <uri>model://cafe_table/meshes/cafe_table.dae</uri>
+              <uri>${find cafe_table}/meshes/cafe_table.dae</uri>
             </mesh>
           </geometry>
         </visual>
@@ -5211,14 +5211,14 @@
         <visual name='visual'>
           <geometry>
             <mesh>
-              <uri>model://first_2015_trash_can/meshes/trash_can.dae</uri>
+              <uri>${find first_2015_trash_can}/meshes/trash_can.dae</uri>
             </mesh>
           </geometry>
         </visual>
         <collision name='collision'>
           <geometry>
             <mesh>
-              <uri>model://first_2015_trash_can/meshes/trash_can.dae</uri>
+              <uri>${find first_2015_trash_can}/meshes/trash_can.dae</uri>
             </mesh>
           </geometry>
         </collision>
@@ -5242,14 +5242,14 @@
         <visual name='visual'>
           <geometry>
             <mesh>
-              <uri>model://first_2015_trash_can/meshes/trash_can.dae</uri>
+              <uri>${find first_2015_trash_can}/meshes/trash_can.dae</uri>
             </mesh>
           </geometry>
         </visual>
         <collision name='collision'>
           <geometry>
             <mesh>
-              <uri>model://first_2015_trash_can/meshes/trash_can.dae</uri>
+              <uri>${find first_2015_trash_can}/meshes/trash_can.dae</uri>
             </mesh>
           </geometry>
         </collision>
@@ -5395,7 +5395,7 @@
         <collision name='collision'>
           <geometry>
             <mesh>
-              <uri>model://table_marble/meshes/table_lightmap.dae</uri>
+              <uri>${find table_marble}/meshes/table_lightmap.dae</uri>
               <scale>0.25 0.25 0.25</scale>
             </mesh>
           </geometry>
@@ -5403,14 +5403,14 @@
         <visual name='visual'>
           <geometry>
             <mesh>
-              <uri>model://table_marble/meshes/table_lightmap.dae</uri>
+              <uri>${find table_marble}/meshes/table_lightmap.dae</uri>
               <scale>0.25 0.25 0.25</scale>
             </mesh>
           </geometry>
           <material>
             <script>
-              <uri>model://table_marble/materials/scripts</uri>
-              <uri>model://table_marble/materials/textures</uri>
+              <uri>${find table_marble}/materials/scripts</uri>
+              <uri>${find table_marble}/materials/textures</uri>
               <name>Table/Marble_Lightmap</name>
             </script>
             <lighting>0</lighting>

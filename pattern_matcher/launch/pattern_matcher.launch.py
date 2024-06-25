@@ -14,7 +14,7 @@ from launch_ros.parameter_descriptions import ParameterValue
 def generate_launch_description():
     # Directories for included launch files
     config_dir = os.path.join(get_package_share_directory('navigation_tb3'),'config')
-    map_file = os.path.join(config_dir,'tb3_map.yaml')
+    map_file = os.path.join(config_dir,'room_map.yaml')
     param_file = os.path.join(config_dir,'tb3_nav2_params.yaml')
 
     package_path = os.path.join(
@@ -31,7 +31,7 @@ def generate_launch_description():
 
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource([os.path.join(
-            get_package_share_directory('turtlebot3_gazebo'), 'launch'), '/turtlebot3_world.launch.py'])
+            get_package_share_directory('turtlebot3_gazebo'), 'launch'), '/turtlebot3_room.launch.py'])
         ),
 
         IncludeLaunchDescription(
@@ -41,24 +41,6 @@ def generate_launch_description():
             'params_file': param_file}.items(),
 
         ),
-        
-        # Pattern model description parameter
-        # DeclareLaunchArgument(
-        #     'pattern_description',
-        #     default_value = pattern_description,
-        #     description='Path to pattern URDF file'
-        # ),
-
-        # Node(
-        #     package='robot_state_publisher',
-        #     executable='robot_state_publisher',
-        #     output='screen',
-        #     parameters=[{'robot_description':  LaunchConfiguration('pattern_description'),
-        #     'use_sim_time': True}],
-        #     remappings=[
-        #         ('/joint_states', '/pattern_joint_states')
-        #     ]
-        # ),
 
         GroupAction([
             PushRosNamespace('pattern'),
@@ -79,12 +61,16 @@ def generate_launch_description():
                 arguments=[
                     '-entity', 'pattern',
                     '-topic', 'robot_description',
-                    '-x', '-0.5',
-                    '-y', '-0.5',
+                    '-x', '2.023530',
+                    '-y', '0.009256',
                     '-z', '0.25',
                     '-Y', '-1.5707'
                 ],
-                output='screen'
+                output='screen',
+                parameters=[
+                {"use_sim_time": True}
+                ],
+                
             )
         ]),
 
@@ -95,6 +81,9 @@ def generate_launch_description():
             name="rviz2",
             output="log",
             arguments=["-d", rviz_config],
+            parameters=[
+                {"use_sim_time": True}
+                ],
 
         ),
 

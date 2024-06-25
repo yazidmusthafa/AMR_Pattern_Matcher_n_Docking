@@ -52,9 +52,43 @@ public:
         velocity_pub_ = create_publisher<geometry_msgs::msg::Twist>("/cmd_vel", 1);
         // goal_pose = this->create_publisher<geometry_msgs::msg::PoseStamped>("/goal_pose", 10);
         action_client_ = rclcpp_action::create_client<NavigateToPose>(this, "navigate_to_pose");
-        parameter_client_ = std::make_shared<rclcpp::SyncParametersClient>(this, "controller_server");
+
+        local_costmap_parameters_client = std::make_shared<rclcpp::AsyncParametersClient>(this, "/local_costmap/local_costmap");
+        global_costmap_parameters_client = std::make_shared<rclcpp::AsyncParametersClient>(this, "/global_costmap/global_costmap");
+
+        send_goal_options.result_callback = std::bind(&ScanToPointCloudNode::result_callback, this, std::placeholders::_1);
 
         tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(this);
+
+        // Create a publisher to publish Twist messages
+        publisher_ = this->create_publisher<geometry_msgs::msg::Twist>("/cmd_vel", 10);
+
+        // Set the forward velocity
+        vel_msg_.linear.x = 0.124;  // Move forward with 0.2 m/s
+        vel_msg_.angular.z = 0.0; // No rotation
+
+        // Record the start time
+        
+    }
+
+    void publish_velocity()
+    {
+        // Loop to move the robot for 2 seconds
+        auto start_time = std::chrono::steady_clock::now();
+        while (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start_time).count() < 2.25)
+        {   
+            // Publish the velocity message
+            publisher_->publish(vel_msg_);
+            // Sleep to maintain the loop rate
+            RCLCPP_INFO(this->get_logger(), "started moving");
+            rclcpp::sleep_for(std::chrono::milliseconds(100));
+        }
+
+        // Stop the robot after 2 seconds
+        vel_msg_.linear.x = 0.0;
+        publisher_->publish(vel_msg_);
+
+        RCLCPP_INFO(this->get_logger(), "Robot moved forward for 2 seconds");
     }
 
 private:
@@ -69,18 +103,16 @@ private:
             geometry_msgs::msg::PoseStamped gl_pose;      
 
             gl_pose.header.frame_id = "map";
-            gl_pose.pose.position.x = 1.0044224262237549;
-            gl_pose.pose.position.y = -0.048272550106048584;
+            gl_pose.pose.position.x = 1.0838078260421753;
+            gl_pose.pose.position.y = -0.006561458110809326;
             gl_pose.pose.position.z = 0.0;
             gl_pose.pose.orientation.x = 0.0;
             gl_pose.pose.orientation.y = 0.0;
-            gl_pose.pose.orientation.z = -0.03102474584439847;
+            gl_pose.pose.orientation.z = 0.001975811161024301;
             gl_pose.pose.orientation.w = 1.0;
             // goal_pose->publish(gl_pose);
             goal_msg.pose = gl_pose;
             
-            auto send_goal_options = rclcpp_action::Client<NavigateToPose>::SendGoalOptions();
-            send_goal_options.result_callback = std::bind(&ScanToPointCloudNode::result_callback, this, std::placeholders::_1);
             action_client_->async_send_goal(goal_msg, send_goal_options);
 
         }
@@ -93,15 +125,21 @@ private:
             RCLCPP_INFO(get_logger(), "Goal succeeded");
             if (dock == false){
 
+                global_costmap_parameters_client->set_parameters({rclcpp::Parameter("inflation_layer.inflation_radius", 0.5)});
+                global_costmap_parameters_client->set_parameters({rclcpp::Parameter("inflation_layer.cost_scaling_factor", 0.5)});
+                local_costmap_parameters_client->set_parameters({rclcpp::Parameter("inflation_layer.inflation_radius", 0.0)});
+                local_costmap_parameters_client->set_parameters({rclcpp::Parameter("inflation_layer.cost_scaling_factor", 0.0)});
+
                 action_client_->wait_for_action_server();
                 // parameter_client_->wait_for_service();
 
                 geometry_msgs::msg::PoseStamped dock_pose;
                 
+                dock_pose.header.stamp = transform_stamped.header.stamp;
                 dock_pose.header.frame_id = transform_stamped.header.frame_id;
                 dock_pose.pose.position.x = transform_stamped.transform.translation.x;
-                dock_pose.pose.position.y =transform_stamped.transform.translation.y;
-                dock_pose.pose.position.z =transform_stamped.transform.translation.z;
+                dock_pose.pose.position.y = transform_stamped.transform.translation.y;
+                dock_pose.pose.position.z = transform_stamped.transform.translation.z;
 
                 dock_pose.pose.orientation.x = 0.0;
                 dock_pose.pose.orientation.y = 0.0;
@@ -114,8 +152,6 @@ private:
                 // rclcpp::Parameter("dwb.max_vel_x", 0.02),
                 // rclcpp::Parameter("dwb.max_vel_theta", 0.02)});
             
-                auto send_goal_options = rclcpp_action::Client<NavigateToPose>::SendGoalOptions();
-                send_goal_options.result_callback = std::bind(&ScanToPointCloudNode::result_callback, this, std::placeholders::_1);
                 action_client_->async_send_goal(goal_msg, send_goal_options);
 
                 dock = true;
@@ -126,10 +162,7 @@ private:
                 // Add blind docking command
                 RCLCPP_INFO(get_logger(), "**************Final Step*************");
 
-                auto msg = geometry_msgs::msg::Twist();
-                msg.linear.x = 0.1;
-                msg.angular.z = 0.0;
-                velocity_pub_->publish(msg);
+               publish_velocity();
 
             }
             break;
@@ -160,12 +193,12 @@ private:
         // w: 0.9999981607095269
         geometry_msgs::msg::PoseWithCovarianceStamped init_pose;       // Try top make it automatically taking the transform of the robot base link
         init_pose.header.frame_id = "map";
-        init_pose.pose.pose.position.x = -0.019896335899829865;
-        init_pose.pose.pose.position.y = -0.008730143308639526;
+        init_pose.pose.pose.position.x = 0.0;
+        init_pose.pose.pose.position.y = 0.0;
         init_pose.pose.pose.position.z = 0.0;
         init_pose.pose.pose.orientation.x = 0.0;
         init_pose.pose.pose.orientation.y = 0.0;
-        init_pose.pose.pose.orientation.z = 0.001917961825328816;
+        init_pose.pose.pose.orientation.z = 0.0;
         init_pose.pose.pose.orientation.w = 1.0;
         initial_pose->publish(init_pose);
 
@@ -323,6 +356,12 @@ private:
 
     bool initialize = true;
     bool dock = false;
+    rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr publisher_;
+    geometry_msgs::msg::Twist vel_msg_;
+    rclcpp::Time start_time_;
+    rclcpp_action::Client<NavigateToPose>::SendGoalOptions send_goal_options;
+    std::shared_ptr<rclcpp::AsyncParametersClient> local_costmap_parameters_client;
+    std::shared_ptr<rclcpp::AsyncParametersClient> global_costmap_parameters_client;
     rclcpp_action::Client<NavigateToPose>::SharedPtr action_client_;
     rclcpp::SyncParametersClient::SharedPtr parameter_client_;
     NavigateToPose::Goal goal_msg;

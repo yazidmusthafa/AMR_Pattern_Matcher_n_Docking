@@ -26,6 +26,7 @@
         "/opt/ros/humble/local/lib/python3.10/dist-packages"
     ],
     "files.associations": {
-        "random": "cpp"
+        "random": "cpp",
+        "chrono": "cpp"
     }
 }
