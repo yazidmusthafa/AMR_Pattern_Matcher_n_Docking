@@ -66,11 +66,7 @@ def generate_launch_description():
                     '-z', '0.25',
                     '-Y', '-1.5707'
                 ],
-                output='screen',
-                parameters=[
-                {"use_sim_time": True}
-                ],
-                
+                output='screen'
             )
         ]),
 
@@ -81,9 +77,6 @@ def generate_launch_description():
             name="rviz2",
             output="log",
             arguments=["-d", rviz_config],
-            parameters=[
-                {"use_sim_time": True}
-                ],
 
         ),
 

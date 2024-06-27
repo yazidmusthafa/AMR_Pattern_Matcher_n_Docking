@@ -30,7 +30,7 @@ def generate_launch_description():
 
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource([os.path.join(
-            get_package_share_directory('turtlebot3_gazebo'), 'launch'), '/turtlebot3_room.launch.py'])
+            get_package_share_directory('turtlebot3_gazebo'), 'launch'), '/empty_world.launch.py'])
         ),
 
         GroupAction([

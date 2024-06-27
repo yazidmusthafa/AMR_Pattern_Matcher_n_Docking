@@ -73,7 +73,7 @@
     </scene>
     <gui fullscreen='0'>
       <camera name='user_camera'>
-        <pose>-0.054335 0.057357 14.5065 -1e-06 1.5698 -0.097588</pose>
+        <pose>-5.43212 -2.4034 6.82764 0 0.733797 0.346418</pose>
         <view_controller>orbit</view_controller>
         <projection_type>perspective</projection_type>
       </camera>
@@ -112,63 +112,6 @@
       <elevation>0</elevation>
       <heading_deg>0</heading_deg>
     </spherical_coordinates>
-    <model name='pattern'>
-      <joint name='pattern_joint' type='fixed'>
-        <pose relative_to='__model__'>0 0 0 0 -0 0</pose>
-        <parent>world</parent>
-        <child>pattern_mesh</child>
-      </joint>
-      <link name='pattern_mesh'>
-        <pose relative_to='pattern_joint'>0 0 0 0 -0 0</pose>
-        <inertial>
-          <pose>0 0 0 0 -0 0</pose>
-          <mass>10</mass>
-          <inertia>
-            <ixx>1</ixx>
-            <ixy>0</ixy>
-            <ixz>0</ixz>
-            <iyy>1</iyy>
-            <iyz>0</iyz>
-            <izz>1</izz>
-          </inertia>
-        </inertial>
-        <collision name='pattern_mesh_collision'>
-          <pose>-0.175 0.05 -0.25 1.5707 -0 0</pose>
-          <geometry>
-            <mesh>
-              <scale>0.001 0.001 0.001</scale>
-              <uri>/home/yazid_musthafa/turtlebot3_ws/install/pattern_matcher/share/pattern_matcher/meshes/pattern.STL</uri>
-            </mesh>
-          </geometry>
-          <max_contacts>10</max_contacts>
-          <surface>
-            <contact>
-              <ode/>
-            </contact>
-            <bounce/>
-            <friction>
-              <torsional>
-                <ode/>
-              </torsional>
-              <ode/>
-            </friction>
-          </surface>
-        </collision>
-        <visual name='pattern_mesh_visual'>
-          <pose>-0.175 0.05 -0.25 1.5707 -0 0</pose>
-          <geometry>
-            <mesh>
-              <scale>0.001 0.001 0.001</scale>
-              <uri>/home/yazid_musthafa/turtlebot3_ws/install/pattern_matcher/share/pattern_matcher/meshes/pattern.STL</uri>
-            </mesh>
-          </geometry>
-        </visual>
-        <self_collide>0</self_collide>
-        <enable_wind>0</enable_wind>
-        <kinematic>0</kinematic>
-      </link>
-      <pose>2.02353 0.009256 0.25 0 0 -1.5707</pose>
-    </model>
     <model name='turtlebot_room'>
       <pose>-0.243177 -0.039357 0 0 -0 0</pose>
       <link name='Wall_10'>
@@ -501,18 +444,18 @@
       </link>
     </model>
     <state world_name='default'>
-      <sim_time>1265 282000000</sim_time>
-      <real_time>1125 400951908</real_time>
-      <wall_time>1719232580 291790056</wall_time>
-      <iterations>1103959</iterations>
+      <sim_time>1347 903000000</sim_time>
+      <real_time>39 833492788</real_time>
+      <wall_time>1719388303 989692145</wall_time>
+      <iterations>37776</iterations>
       <model name='cardboard_box'>
         <pose>-1.63712 -0.808957 0.149 0 -0 0</pose>
         <scale>1 1 1</scale>
         <link name='link'>
           <pose>-1.63712 -0.808957 0.149 0 -0 0</pose>
           <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>0 0 0 0 -0 0</acceleration>
-          <wrench>0 0 0 0 -0 0</wrench>
+          <acceleration>-0 -0 0 0 -0 0</acceleration>
+          <wrench>-0 -0 0 0 -0 0</wrench>
         </link>
       </model>
       <model name='ground_plane'>
@@ -531,8 +474,8 @@
         <link name='link'>
           <pose>-0.117754 1.88703 0.321945 0 -0 0</pose>
           <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>0 -0 0 0 -0 0</acceleration>
-          <wrench>0 -0 0 0 -0 0</wrench>
+          <acceleration>0 -0 -0 0 -0 0</acceleration>
+          <wrench>0 -0 -0 0 -0 0</wrench>
         </link>
       </model>
       <model name='package_box_0'>
@@ -541,8 +484,8 @@
         <link name='link'>
           <pose>0.787685 -2.18975 0.321945 0 -0 0</pose>
           <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>-0 0 -0 -0 -0 -0</acceleration>
-          <wrench>-0 0 -0 0 -0 0</wrench>
+          <acceleration>0 -0 -0 0 -0 0</acceleration>
+          <wrench>0 -0 -0 0 -0 0</wrench>
         </link>
       </model>
       <model name='package_box_1'>
@@ -551,18 +494,8 @@
         <link name='link'>
           <pose>2.95516 1.81212 0.321945 0 -0 0</pose>
           <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>-0 0 -0 -0 -0 -0</acceleration>
-          <wrench>-0 0 -0 0 -0 0</wrench>
-        </link>
-      </model>
-      <model name='pattern'>
-        <pose>2.02353 0.009256 0.249999 0 0 -1.5707</pose>
-        <scale>1 1 1</scale>
-        <link name='pattern_mesh'>
-          <pose>2.02353 0.009256 0.249999 0 0 -1.5707</pose>
-          <velocity>1.1e-05 0 -0.000818 -1e-06 4.5e-05 0</velocity>
-          <acceleration>0.022533 0.000393 -1.63611 -0.001566 0.090132 -2.4e-05</acceleration>
-          <wrench>0.225328 0.003927 -16.3611 0 -0 0</wrench>
+          <acceleration>0 -0 -0 0 -0 0</acceleration>
+          <wrench>0 -0 -0 0 -0 0</wrench>
         </link>
       </model>
       <model name='turtlebot_room'>

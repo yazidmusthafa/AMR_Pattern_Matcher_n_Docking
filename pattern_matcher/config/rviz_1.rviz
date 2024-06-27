@@ -175,30 +175,31 @@ Visualization Manager:
       Show Axes: true
       Show Names: false
       Tree:
+        base_footprint:
+          base_link:
+            base_scan:
+              {}
+            camera_link:
+              camera_depth_frame:
+                camera_depth_optical_frame:
+                  {}
+              camera_rgb_frame:
+                camera_rgb_optical_frame:
+                  {}
+            caster_back_left_link:
+              {}
+            caster_back_right_link:
+              {}
+            imu_link:
+              {}
+            pattern_frame:
+              {}
+            wheel_left_link:
+              {}
+            wheel_right_link:
+              {}
         odom:
-          base_footprint:
-            base_link:
-              base_scan:
-                {}
-              camera_link:
-                camera_depth_frame:
-                  camera_depth_optical_frame:
-                    {}
-                camera_rgb_frame:
-                  camera_rgb_optical_frame:
-                    {}
-              caster_back_left_link:
-                {}
-              caster_back_right_link:
-                {}
-              imu_link:
-                {}
-              pattern_frame:
-                {}
-              wheel_left_link:
-                {}
-              wheel_right_link:
-                {}
+          {}
       Update Interval: 0
       Value: true
     - Alpha: 1
@@ -269,6 +270,40 @@ Visualization Manager:
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz_default_plugins/LaserScan
+      Color: 255; 255; 255
+      Color Transformer: Intensity
+      Decay Time: 0
+      Enabled: true
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 0
+      Min Color: 0; 0; 0
+      Min Intensity: 0
+      Name: LaserScan
+      Position Transformer: XYZ
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.009999999776482582
+      Style: Flat Squares
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /scan
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -306,7 +341,7 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Angle: -1.6150002479553223
+      Angle: -1.6800003051757812
       Class: rviz_default_plugins/TopDownOrtho
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
@@ -316,11 +351,11 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 540.6007080078125
+      Scale: 376.1690979003906
       Target Frame: <Fixed Frame>
       Value: TopDownOrtho (rviz_default_plugins)
-      X: -0.044467076659202576
-      Y: -0.38726311922073364
+      X: 0.46953362226486206
+      Y: 0.3666299879550934
     Saved: ~
 Window Geometry:
   Displays:
@@ -338,5 +373,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 1545
-  X: 234
-  Y: 70
+  X: 140
+  Y: 80

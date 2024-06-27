@@ -27,6 +27,7 @@
     ],
     "files.associations": {
         "random": "cpp",
-        "chrono": "cpp"
+        "chrono": "cpp",
+        "functional": "cpp"
     }
 }

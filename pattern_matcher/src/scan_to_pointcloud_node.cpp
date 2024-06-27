@@ -33,7 +33,7 @@ public:
     ScanToPointCloudNode() : Node("pattern_matcher")
     {
         // Load pattern PCD file
-        std::string pattern_path = ament_index_cpp::get_package_share_directory("pattern_matcher") + "/pcd/pattern.pcd";
+        std::string pattern_path = ament_index_cpp::get_package_share_directory("pattern_matcher") + "/pcd/pattern_new.pcd";
         if (pcl::io::loadPCDFile<pcl::PointXYZ>(pattern_path, *pattern_cloud_) == -1)
         {
             RCLCPP_ERROR(this->get_logger(), "Couldn't read pattern file");
@@ -75,7 +75,7 @@ public:
     {
         // Loop to move the robot for 2 seconds
         auto start_time = std::chrono::steady_clock::now();
-        while (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start_time).count() < 2.25)
+        while (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start_time).count() < 2.85)
         {   
             // Publish the velocity message
             publisher_->publish(vel_msg_);
@@ -104,7 +104,7 @@ private:
 
             gl_pose.header.frame_id = "map";
             gl_pose.pose.position.x = 1.0838078260421753;
-            gl_pose.pose.position.y = -0.006561458110809326;
+            gl_pose.pose.position.y = 0.009256;
             gl_pose.pose.position.z = 0.0;
             gl_pose.pose.orientation.x = 0.0;
             gl_pose.pose.orientation.y = 0.0;
@@ -126,9 +126,9 @@ private:
             if (dock == false){
 
                 global_costmap_parameters_client->set_parameters({rclcpp::Parameter("inflation_layer.inflation_radius", 0.5)});
-                global_costmap_parameters_client->set_parameters({rclcpp::Parameter("inflation_layer.cost_scaling_factor", 0.5)});
-                local_costmap_parameters_client->set_parameters({rclcpp::Parameter("inflation_layer.inflation_radius", 0.0)});
-                local_costmap_parameters_client->set_parameters({rclcpp::Parameter("inflation_layer.cost_scaling_factor", 0.0)});
+                global_costmap_parameters_client->set_parameters({rclcpp::Parameter("inflation_layer.cost_scaling_factor", 5.0)});
+                local_costmap_parameters_client->set_parameters({rclcpp::Parameter("inflation_layer.inflation_radius", 0.2)});
+                local_costmap_parameters_client->set_parameters({rclcpp::Parameter("inflation_layer.cost_scaling_factor", 10.0)});
 
                 action_client_->wait_for_action_server();
                 // parameter_client_->wait_for_service();
@@ -211,7 +211,7 @@ private:
         float angle = scan_msg->angle_min;
         for (const auto &range : scan_msg->ranges)
         {
-            if (range >= scan_msg->range_min && range <= scan_msg->range_max)
+            if (range >= scan_msg->range_min && range <= 1.55)
             {
                 pcl::PointXYZ point;
                 point.x = range * std::cos(angle);
@@ -222,25 +222,25 @@ private:
             angle += scan_msg->angle_increment;
         }
 
-        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_smoothed(new pcl::PointCloud<pcl::PointXYZ>());
-        pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>());
+        // pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_smoothed(new pcl::PointCloud<pcl::PointXYZ>());
+        // pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>());
 
-        pcl::MovingLeastSquares<pcl::PointXYZ, pcl::PointXYZ> mls;
-        mls.setComputeNormals(false);
-        mls.setInputCloud(cloud);
-        mls.setPolynomialOrder(2);
-        mls.setSearchMethod(tree);
-        mls.setSearchRadius(0.05);
+        // pcl::MovingLeastSquares<pcl::PointXYZ, pcl::PointXYZ> mls;
+        // mls.setComputeNormals(false);
+        // mls.setInputCloud(cloud);
+        // mls.setPolynomialOrder(2);
+        // mls.setSearchMethod(tree);
+        // mls.setSearchRadius(0.05);
 
-        mls.process(*cloud_smoothed);
+        // mls.process(*cloud_smoothed);
 
         // Perform Euclidean Clustering
         std::vector<pcl::PointIndices> cluster_indices;
         pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
         ec.setClusterTolerance(0.06); 
-        ec.setMinClusterSize(20);
-        ec.setMaxClusterSize(100);
-        ec.setInputCloud(cloud_smoothed);
+        ec.setMinClusterSize(14);
+        ec.setMaxClusterSize(120);
+        ec.setInputCloud(cloud);       // cloud_smoothed
         ec.extract(cluster_indices);
 
         // Create PointCloud2 message for publishing
@@ -265,14 +265,14 @@ private:
             int r = colors[color_idx % colors.size()][0];
             int g = colors[color_idx % colors.size()][1];
             int b = colors[color_idx % colors.size()][2];
-            cloud_cluster->clear();
+            cloud_cluster->clear();                           
             for (const auto &idx : indices.indices)
             {
                 pcl::PointXYZRGB point_rgb;
                 pcl::PointXYZ point;
-                point.x = point_rgb.x = cloud_smoothed->points[idx].x;
-                point.y = point_rgb.y = cloud_smoothed->points[idx].y;
-                point.z = point_rgb.z = cloud_smoothed->points[idx].z;
+                point.x = point_rgb.x = cloud->points[idx].x;
+                point.y = point_rgb.y = cloud->points[idx].y;
+                point.z = point_rgb.z = cloud->points[idx].z;
                 point_rgb.r = r;
                 point_rgb.g = g;
                 point_rgb.b = b;
@@ -290,66 +290,66 @@ private:
             output.header = scan_msg->header;
             pc_pub_->publish(output);
 
+            // RCLCPP_INFO(get_logger(), "######### Size of ####### %li", cloud_cluster->points.size());
 
-            if (cloud_cluster->points.size() < 90){
 
-                // Perform ICP for pattern matching
-                pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
-                icp.setInputSource(pattern_cloud_);
-                icp.setInputTarget(cloud_cluster);
-                icp.setMaximumIterations(500); // Increase iterations for better convergence
-                pcl::PointCloud<pcl::PointXYZ> Final;
-                icp.align(Final);
 
-                if (icp.hasConverged() && icp.getFitnessScore() < 0.00015)
-                {
-                    pattern_matched = true;
-                    best_transformation = icp.getFinalTransformation();
-                    // break; // Stop after finding the first match
-                }
+            // Perform ICP for pattern matching
+            pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
+            icp.setInputSource(pattern_cloud_);
+            icp.setInputTarget(cloud_cluster);
+            icp.setMaximumIterations(500); // Increase iterations for better convergence
+            pcl::PointCloud<pcl::PointXYZ> Final;
+            icp.align(Final);
+
+            if (icp.hasConverged() && icp.getFitnessScore() < 0.00015)
+            {
+                pattern_matched = true;
+                best_transformation = icp.getFinalTransformation();
+                // break; // Stop after finding the first match
+            }
             
-        if (pattern_matched)
-        {
-            // Transform pattern point cloud to match the detected location
-            pcl::PointCloud<pcl::PointXYZ>::Ptr transformed_pattern(new pcl::PointCloud<pcl::PointXYZ>);
-            pcl::transformPointCloud(*pattern_cloud_, *transformed_pattern, best_transformation);
+            if (pattern_matched)
+            {
+                // Transform pattern point cloud to match the detected location
+                pcl::PointCloud<pcl::PointXYZ>::Ptr transformed_pattern(new pcl::PointCloud<pcl::PointXYZ>);
+                pcl::transformPointCloud(*pattern_cloud_, *transformed_pattern, best_transformation);
 
-            // Publish the matched pattern point cloud
-            sensor_msgs::msg::PointCloud2 pattern_output;
-            pcl::toROSMsg(*transformed_pattern, pattern_output);
-            pattern_output.header = scan_msg->header;
-            pattern_pub_->publish(pattern_output);
+                // Publish the matched pattern point cloud
+                sensor_msgs::msg::PointCloud2 pattern_output;
+                pcl::toROSMsg(*transformed_pattern, pattern_output);
+                pattern_output.header = scan_msg->header;
+                pattern_pub_->publish(pattern_output);
 
-            // RCLCPP_INFO(this->get_logger(), "Transformation Matrix:");
-            // for (int i = 0; i < 4; ++i)
-            // {
-            //     RCLCPP_INFO(this->get_logger(), "[%f, %f, %f, %f]",
-            //                 best_transformation(i, 0), best_transformation(i, 1), 
-            //                 best_transformation(i, 2), best_transformation(i, 3));
-            // }
+                // RCLCPP_INFO(this->get_logger(), "Transformation Matrix:");
+                // for (int i = 0; i < 4; ++i)
+                // {
+                //     RCLCPP_INFO(this->get_logger(), "[%f, %f, %f, %f]",
+                //                 best_transformation(i, 0), best_transformation(i, 1), 
+                //                 best_transformation(i, 2), best_transformation(i, 3));
+                // }
 
 
-            // Broadcast the transform
-            
-            transform_stamped.header.stamp = this->now();
-            transform_stamped.header.frame_id = "base_link"; // Adjust the frame according to your setup
-            transform_stamped.child_frame_id = "pattern_frame";
-            transform_stamped.transform.translation.x = best_transformation(0, 3);
-            transform_stamped.transform.translation.y = best_transformation(1, 3);
-            transform_stamped.transform.translation.z = best_transformation(2, 3);
+                // Broadcast the transform
+                
+                transform_stamped.header.stamp = this->now();
+                transform_stamped.header.frame_id = "base_link"; // Adjust the frame according to your setup
+                transform_stamped.child_frame_id = "pattern_frame";
+                transform_stamped.transform.translation.x = best_transformation(0, 3);
+                transform_stamped.transform.translation.y = best_transformation(1, 3);
+                transform_stamped.transform.translation.z = best_transformation(2, 3);
 
-            Eigen::Quaternionf q(best_transformation.block<3, 3>(0, 0));
-            transform_stamped.transform.rotation.x = q.x();
-            transform_stamped.transform.rotation.y = q.y();
-            transform_stamped.transform.rotation.z = q.z();
-            transform_stamped.transform.rotation.w = q.w();
+                Eigen::Quaternionf q(best_transformation.block<3, 3>(0, 0));
+                transform_stamped.transform.rotation.x = q.x();
+                transform_stamped.transform.rotation.y = q.y();
+                transform_stamped.transform.rotation.z = q.z();
+                transform_stamped.transform.rotation.w = q.w();
 
-            tf_broadcaster_->sendTransform(transform_stamped);
-            
-            // ros2 topic echo /tf | grep -B 4 -A 12 "child_frame_id: pattern_frame"
+                tf_broadcaster_->sendTransform(transform_stamped);
+                
+                // ros2 topic echo /tf | grep -B 4 -A 12 "child_frame_id: pattern_frame"
 
-        }
-        }
+            }
     }
         
     }
