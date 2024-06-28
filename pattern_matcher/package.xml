@@ -15,7 +15,12 @@
   <depend>pcl_ros</depend>
   <depend>PCL</depend>
   <depend>ament_index_cpp</depend>
-
+  <depend>laser_geometry</depend>
+  <depend>tf2</depend>
+  <depend>tf2_ros</depend>
+  <depend>geometry_msgs</depend>
+  <depend>Eigen3</depend>
+  
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
 
