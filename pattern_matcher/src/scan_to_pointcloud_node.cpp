@@ -5,6 +5,7 @@
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include <sensor_msgs/msg/laser_scan.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
+#include <sensor_msgs/msg/joint_state.hpp>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
@@ -46,6 +47,9 @@ public:
         initialize_charging = create_subscription<std_msgs::msg::Bool>(
             "/initialize_charging", 10, std::bind(&ScanToPointCloudNode::goToCharging, this, std::placeholders::_1));
         
+        encoder_data = create_subscription<sensor_msgs::msg::JointState>(
+            "/joint_states", 10, std::bind(&ScanToPointCloudNode::back_dock, this, std::placeholders::_1));
+        
         velocity_pub_ = create_publisher<geometry_msgs::msg::Twist>("/cmd_vel", 1);
         // goal_pose = this->create_publisher<geometry_msgs::msg::PoseStamped>("/goal_pose", 10);
         nav_action_client_ = rclcpp_action::create_client<NavigateToPose>(this, "navigate_to_pose");
@@ -64,13 +68,14 @@ public:
         // Action Servers:    /pattern_match: matcher_action_interfaces/action/Matcher
 
         
+        
     }
 
     void publish_velocity()
     {
         // Loop to move the robot for 2 seconds
         auto start_time = std::chrono::steady_clock::now();
-        while (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start_time).count() < 1.9)
+        while (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start_time).count() < 10)
         {   
             // Set the forward velocity
             vel_msg_.linear.x = 0.124;  // Move forward with 0.2 m/s
@@ -91,6 +96,44 @@ public:
     }
 
 private:
+
+    void back_dock(const sensor_msgs::msg::JointState::SharedPtr enc){
+
+        double left_wheel = enc->position[0];
+        double right_wheel = enc->position[1];
+
+        // RCLCPP_INFO(this->get_logger(), "Left Wheel Encoder Data ###### %s", dock ? "true" : "false");
+
+        if (backdock == true && initial_point == false){
+            left_start = left_wheel;
+            right_start = right_wheel;   
+            initial_point = true;      
+        }
+
+        if (backdock){
+
+            if ((left_wheel-left_start) <= 13.847164692){
+                vel_msg_.linear.x = 0.0; 
+                vel_msg_.angular.z = -0.15;
+                publisher_->publish(vel_msg_);
+                // RCLCPP_INFO(this->get_logger(), "Left Wheel Encoder Data ###### %f", left_wheel);
+            }
+            else{
+                vel_msg_.linear.x = 0.0; 
+                vel_msg_.angular.z = 0.0;
+                publisher_->publish(vel_msg_);
+                
+                dock = false;     /////////
+                backdock = false;
+                initial_point = true;
+
+                RCLCPP_INFO(this->get_logger(), "Left Wheel Encoder Data Diff ###### %f", (left_wheel-left_start));
+
+            }
+        }
+    
+    }
+
     void goToCharging(const std_msgs::msg::Bool::SharedPtr x){  
         
         //ros2 topic pub --once /initialize_charging std_msgs/msg/Bool data:\ true\ 
@@ -115,7 +158,7 @@ private:
             nav_action_client_->async_send_goal(goal_msg, send_goal_options);
 
         }
-        }
+    }
     
     void matcher_result_callback(const GoalHandlePatternMatchPose::WrappedResult &results){
         pattern_pose = results.result->result_pose;
@@ -152,12 +195,12 @@ private:
             }
             else{
 
-                dock = false;
-
                 // Add blind docking command
                 RCLCPP_INFO(get_logger(), "**************Final Step*************");
 
-               publish_velocity();
+                backdock = true;
+
+            //    publish_velocity();
 
             }
             break;
@@ -174,6 +217,10 @@ private:
     }
 
     bool dock = false;
+    bool backdock = false;
+    double left_start;
+    double right_start;
+    bool initial_point = false;
     rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr publisher_;
     geometry_msgs::msg::PoseStamped pattern_pose;
     geometry_msgs::msg::Twist vel_msg_;
@@ -187,6 +234,7 @@ private:
     PatternMatchPose::Goal initiate_msg;
     NavigateToPose::Goal goal_msg;
     rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr initialize_charging;
+    rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr encoder_data;
     rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr velocity_pub_;
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr goal_pose;
 };
