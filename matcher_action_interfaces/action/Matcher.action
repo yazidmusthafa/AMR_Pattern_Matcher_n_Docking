@@ -1,0 +1,5 @@
+bool initialize
+---
+geometry_msgs/PoseStamped result_pose
+---
+int32[] partial_sequence

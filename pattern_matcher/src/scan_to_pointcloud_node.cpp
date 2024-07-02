@@ -1,6 +1,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp_action/rclcpp_action.hpp>
 #include <rclcpp/parameter_client.hpp>
+#include <matcher_action_interfaces/action/matcher.hpp>
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include <sensor_msgs/msg/laser_scan.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
@@ -27,14 +28,19 @@
 #include <cmath>
 #include <vector>
 #include <array>
+#include <functional>
+#include <memory>
+#include <thread>
 
 using NavigateToPose = nav2_msgs::action::NavigateToPose;
 using GoalHandleNavigateToPose = rclcpp_action::ClientGoalHandle<NavigateToPose>;
+using PatternMatchPose = matcher_action_interfaces::action::Matcher;
+using GoalHandlePatternMatchPose = rclcpp_action::ClientGoalHandle<PatternMatchPose>;
 
 class ScanToPointCloudNode : public rclcpp::Node
 {
 public:
-    ScanToPointCloudNode() : Node("pattern_matcher")
+    ScanToPointCloudNode() : Node("scan_to_point_cloud_node")
     {
         // Subscriptions and Publishers
         initialize_charging = create_subscription<std_msgs::msg::Bool>(
@@ -42,15 +48,21 @@ public:
         
         velocity_pub_ = create_publisher<geometry_msgs::msg::Twist>("/cmd_vel", 1);
         // goal_pose = this->create_publisher<geometry_msgs::msg::PoseStamped>("/goal_pose", 10);
-        action_client_ = rclcpp_action::create_client<NavigateToPose>(this, "navigate_to_pose");
+        nav_action_client_ = rclcpp_action::create_client<NavigateToPose>(this, "navigate_to_pose");
+        matcher_action_client = rclcpp_action::create_client<PatternMatchPose>(this, "pattern_match");
 
         local_costmap_parameters_client = std::make_shared<rclcpp::AsyncParametersClient>(this, "/local_costmap/local_costmap");
         global_costmap_parameters_client = std::make_shared<rclcpp::AsyncParametersClient>(this, "/global_costmap/global_costmap");
 
         send_goal_options.result_callback = std::bind(&ScanToPointCloudNode::result_callback, this, std::placeholders::_1);
+        
+        send_initiate_.result_callback = std::bind(&ScanToPointCloudNode::matcher_result_callback, this, std::placeholders::_1);
 
         // Create a publisher to publish Twist messages
         publisher_ = this->create_publisher<geometry_msgs::msg::Twist>("/cmd_vel", 10);
+
+        // Action Servers:    /pattern_match: matcher_action_interfaces/action/Matcher
+
         
     }
 
@@ -85,7 +97,7 @@ private:
 
         if (x){
 
-            action_client_->wait_for_action_server();
+            nav_action_client_->wait_for_action_server();
 
             geometry_msgs::msg::PoseStamped gl_pose;      
 
@@ -100,10 +112,20 @@ private:
             // goal_pose->publish(gl_pose);
             goal_msg.pose = gl_pose;
             
-            action_client_->async_send_goal(goal_msg, send_goal_options);
+            nav_action_client_->async_send_goal(goal_msg, send_goal_options);
 
         }
         }
+    
+    void matcher_result_callback(const GoalHandlePatternMatchPose::WrappedResult &results){
+        pattern_pose = results.result->result_pose;
+        goal_msg.pose = pattern_pose;
+        nav_action_client_->async_send_goal(goal_msg, send_goal_options);
+        RCLCPP_INFO(get_logger(), "******* Matcher result callback Run ******");
+        RCLCPP_INFO(get_logger(), "Pattern matching succeeded. Result Pose: x=%f, y=%f, z=%f",
+                        pattern_pose.pose.position.x, pattern_pose.pose.position.y, pattern_pose.pose.position.z);
+    }
+
     void result_callback(const GoalHandleNavigateToPose::WrappedResult &result)
     {
         switch (result.code)
@@ -117,13 +139,13 @@ private:
                 local_costmap_parameters_client->set_parameters({rclcpp::Parameter("inflation_layer.inflation_radius", 0.1)});
                 local_costmap_parameters_client->set_parameters({rclcpp::Parameter("inflation_layer.cost_scaling_factor", 10.0)});
 
-                action_client_->wait_for_action_server();
+                nav_action_client_->wait_for_action_server();
 
-                rclcpp::sleep_for(std::chrono::milliseconds(2000));
+                matcher_action_client -> wait_for_action_server();
 
-                goal_msg.pose = pattern_pose_in_map;
-            
-                action_client_->async_send_goal(goal_msg, send_goal_options);
+                initiate_msg.initialize = true;
+
+                matcher_action_client->async_send_goal(initiate_msg, send_initiate_);
 
                 dock = true;
 
@@ -153,12 +175,16 @@ private:
 
     bool dock = false;
     rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr publisher_;
+    geometry_msgs::msg::PoseStamped pattern_pose;
     geometry_msgs::msg::Twist vel_msg_;
     rclcpp::Time start_time_;
     rclcpp_action::Client<NavigateToPose>::SendGoalOptions send_goal_options;
+    rclcpp_action::Client<PatternMatchPose>::SendGoalOptions send_initiate_;
     std::shared_ptr<rclcpp::AsyncParametersClient> local_costmap_parameters_client;
     std::shared_ptr<rclcpp::AsyncParametersClient> global_costmap_parameters_client;
-    rclcpp_action::Client<NavigateToPose>::SharedPtr action_client_;
+    rclcpp_action::Client<NavigateToPose>::SharedPtr nav_action_client_;
+    rclcpp_action::Client<PatternMatchPose>::SharedPtr matcher_action_client;
+    PatternMatchPose::Goal initiate_msg;
     NavigateToPose::Goal goal_msg;
     rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr initialize_charging;
     rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr velocity_pub_;
@@ -172,7 +198,10 @@ private:
 class PatternMatcherNode : public rclcpp::Node
 {
     public:
-    PatternMatcherNode() : Node("pattern_matcher_2")
+    using Matcher = matcher_action_interfaces::action::Matcher;
+    using GoalHandleMatcher = rclcpp_action::ServerGoalHandle<Matcher>;
+
+    PatternMatcherNode() : Node("pattern_matcher_node")
     {
                 // Load pattern PCD file
         std::string pattern_path = ament_index_cpp::get_package_share_directory("pattern_matcher") + "/pcd/pattern_1.pcd";
@@ -197,27 +226,48 @@ class PatternMatcherNode : public rclcpp::Node
         tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
         initial_pose = this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("/initialpose", 10);
 
+        using namespace std::placeholders;
+
+        matcher_action_server_ = rclcpp_action::create_server<Matcher>(
+            this,
+            "pattern_match",
+            std::bind(&PatternMatcherNode::handle_goal, this, _1, _2),
+            std::bind(&PatternMatcherNode::handle_cancel, this, _1),
+            std::bind(&PatternMatcherNode::handle_accepted, this, _1));
+
     }
 
     private:
-    void scanCallback(const sensor_msgs::msg::LaserScan::SharedPtr scan_msg)
+
+    rclcpp_action::Server<Matcher>::SharedPtr matcher_action_server_;
+
+    rclcpp_action::GoalResponse handle_goal(const rclcpp_action::GoalUUID &uuid, std::shared_ptr<const Matcher::Goal> goal)
     {
+        RCLCPP_INFO(this->get_logger(), "Received goal request ");
+        (void)uuid;
+        (void)goal;
+        return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
+    }
 
-        if (initialize == true){
+    rclcpp_action::CancelResponse handle_cancel(const std::shared_ptr<GoalHandleMatcher> goal_handle)
+    {
+        RCLCPP_INFO(this->get_logger(), "Received request to cancel goal");
+        (void)goal_handle;
+        return rclcpp_action::CancelResponse::ACCEPT;
+    }
 
-        geometry_msgs::msg::PoseWithCovarianceStamped init_pose;       // Try top make it automatically taking the transform of the robot base link
-        init_pose.header.frame_id = "map";
-        init_pose.pose.pose.position.x = 0.0;
-        init_pose.pose.pose.position.y = 0.0;
-        init_pose.pose.pose.position.z = 0.0;
-        init_pose.pose.pose.orientation.x = 0.0;
-        init_pose.pose.pose.orientation.y = 0.0;
-        init_pose.pose.pose.orientation.z = 0.0;
-        init_pose.pose.pose.orientation.w = 1.0;
-        initial_pose->publish(init_pose);
+    void handle_accepted(const std::shared_ptr<GoalHandleMatcher> goal_handle)
+    {
+        using namespace std::placeholders;
+        std::thread{std::bind(&PatternMatcherNode::execute, this, _1), goal_handle}.detach();
+    }
 
-        initialize = false;
-        }
+    void execute(const std::shared_ptr<GoalHandleMatcher> goal_handle)
+    {
+        RCLCPP_INFO(this->get_logger(), "Executing goal");
+        // rclcpp::Rate loop_rate(1);
+
+        auto result = std::make_shared<Matcher::Result>();
 
         pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
 
@@ -357,16 +407,62 @@ class PatternMatcherNode : public rclcpp::Node
 
                 pattern_pose_in_map = tf_buffer_->transform(pattern_pose, "map", tf2::Duration(std::chrono::seconds(2)));
 
-                tf_broadcaster_->sendTransform(transform_stamped);
+                /////////////////////////
+
+                geometry_msgs::msg::TransformStamped transform_stamped_2;
+                transform_stamped_2.header.stamp = pattern_pose_in_map.header.stamp;
+                transform_stamped_2.header.frame_id = pattern_pose_in_map.header.frame_id;
+                transform_stamped_2.transform.translation.x = pattern_pose_in_map.pose.position.x;
+                transform_stamped_2.transform.translation.y = pattern_pose_in_map.pose.position.y;
+                transform_stamped_2.transform.translation.z = pattern_pose_in_map.pose.position.z;
+                transform_stamped_2.transform.rotation.x = pattern_pose_in_map.pose.orientation.x;
+                transform_stamped_2.transform.rotation.y = pattern_pose_in_map.pose.orientation.y;
+                transform_stamped_2.transform.rotation.z = pattern_pose_in_map.pose.orientation.z;
+                transform_stamped_2.transform.rotation.w = pattern_pose_in_map.pose.orientation.w;
+                transform_stamped_2.child_frame_id = "pattern_frame";
+
+                ///////////////////////////
+
+                tf_broadcaster_->sendTransform(transform_stamped_2);
+
+                result->result_pose = pattern_pose_in_map;
+                goal_handle->succeed(result);
+                RCLCPP_INFO(this->get_logger(), "Pattern matched successfully");
+
+                return;
                 
                 // ros2 topic echo /tf | grep -B 4 -A 12 "child_frame_id: pattern_frame"
 
             }
+        }
+    
     }
-        
+
+    void scanCallback(const sensor_msgs::msg::LaserScan::SharedPtr scan_msgs)
+    {
+
+        if (initialize == true){
+
+        geometry_msgs::msg::PoseWithCovarianceStamped init_pose;       // Try top make it automatically taking the transform of the robot base link
+        init_pose.header.frame_id = "map";
+        init_pose.pose.pose.position.x = 0.0;
+        init_pose.pose.pose.position.y = 0.0;
+        init_pose.pose.pose.position.z = 0.0;
+        init_pose.pose.pose.orientation.x = 0.0;
+        init_pose.pose.pose.orientation.y = 0.0;
+        init_pose.pose.pose.orientation.z = 0.0;
+        init_pose.pose.pose.orientation.w = 1.0;
+        initial_pose->publish(init_pose);
+
+        initialize = false;
+        }
+
+        scan_msg = scan_msgs;
+
     }
 
     bool initialize = true;
+    sensor_msgs::msg::LaserScan::SharedPtr scan_msg;
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pattern_pose_pub;
     geometry_msgs::msg::PoseStamped pattern_pose_in_map;
     geometry_msgs::msg::TransformStamped transform_stamped;
@@ -384,10 +480,15 @@ class PatternMatcherNode : public rclcpp::Node
 int main(int argc, char **argv)
 {
     rclcpp::init(argc, argv);
-    auto node_1 = std::make_shared<ScanToPointCloudNode>();
-    auto node_2 = std::make_shared<PatternMatcherNode>();
-    rclcpp::spin(node_1);
-    rclcpp::spin(node_2);
+    auto scan_to_pointcloud_node = std::make_shared<ScanToPointCloudNode>();
+    auto pattern_matcher_node = std::make_shared<PatternMatcherNode>();
+
+    rclcpp::executors::MultiThreadedExecutor executor;
+    executor.add_node(scan_to_pointcloud_node);
+    executor.add_node(pattern_matcher_node);
+
+    executor.spin();
+
     rclcpp::shutdown();
     return 0;
 }

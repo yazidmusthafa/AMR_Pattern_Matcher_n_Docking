@@ -81,7 +81,6 @@ def generate_launch_description():
         ),
 
         Node(
-            name="scan_to_pointcloud_node",
             package="pattern_matcher",
             executable="scan_to_pointcloud_node",
             output="screen",
