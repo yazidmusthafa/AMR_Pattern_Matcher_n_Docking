@@ -22,4 +22,4 @@
   2. Colcon build the workspace.
   3. Open a terminal into the workspace directory and source it.
   4. Then run the command "ros2 launch pattern_matcher pattern_matcher.launch.py" to launch all the necessary programs.
-  5. After the launching of Gazebo and successful Spawning of Robot in the World is completed, run the following command "ros2 topic pub --once /initialize_charging std_msgs/msg/Bool data:\ true\ "
+  5. After the launching of Gazebo and successful Spawning of Robot in the World is completed, run the following command in a new terminal "ros2 topic pub --once /initialize_charging std_msgs/msg/Bool data:\ true\ "
