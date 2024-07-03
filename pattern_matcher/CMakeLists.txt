@@ -17,14 +17,14 @@ find_package(tf2_ros REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(Eigen3 REQUIRED)
 
-add_executable(scan_to_pointcloud_node src/scan_to_pointcloud_node.cpp)
-ament_target_dependencies(scan_to_pointcloud_node rclcpp sensor_msgs pcl_conversions pcl_ros PCL nav2_msgs tf2 tf2_ros geometry_msgs Eigen3 matcher_action_interfaces)
+add_executable(robot_control src/robot_control.cpp)
+ament_target_dependencies(robot_control rclcpp sensor_msgs pcl_conversions pcl_ros PCL nav2_msgs tf2 tf2_ros geometry_msgs Eigen3 matcher_action_interfaces)
 
 add_executable(recorder src/recorder.cpp)
 ament_target_dependencies(recorder rclcpp sensor_msgs pcl_conversions pcl_ros PCL nav2_msgs laser_geometry)
 
 install(TARGETS
-  scan_to_pointcloud_node
+  robot_control
   recorder
   DESTINATION lib/${PROJECT_NAME})
 
