@@ -3,7 +3,7 @@
     1. The Pattern Matching and Reverse Docking is intitiated when the initialization msg is published in a topic using the command "ros2 topic pub --once /initialize_charging std_msgs/msg/Bool data:\ true\ ".
     2. Now a goal pose (predetermined pose near the charging dock) is send to the Nav2 Action Server "navigate_to_pose".
     3. When the robot reach the Goal successfully, the Pattern Matching is started by sending an initialization msg to the action server created for Pattern Matching in the PatternMatcherNode.
-    4. ### Steps involved in Pattern Matching:
+   ### 4. Steps involved in Pattern Matching:
        1. In the PatternMatcherNode, the Data from 2D-Lidar (in topic /scan) is saved in to a global variable in real-time.
        2. When the Pattern Matching is initialized, the Lidar data is filtered using the range and angle limit, for the sake of Computation Speed. 
        3. This Data is converted into corresponding PointCloud data using PCL (library) and trignometry.
