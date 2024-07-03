@@ -71,30 +71,6 @@ public:
         
     }
 
-    void publish_velocity()
-    {
-        // Loop to move the robot for 2 seconds
-        auto start_time = std::chrono::steady_clock::now();
-        while (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start_time).count() < 10)
-        {   
-            // Set the forward velocity
-            vel_msg_.linear.x = 0.124;  // Move forward with 0.2 m/s
-            vel_msg_.angular.z = 0.0; // No rotation
-
-            // Publish the velocity message
-            publisher_->publish(vel_msg_);
-            // Sleep to maintain the loop rate
-            RCLCPP_INFO(this->get_logger(), "started moving");
-            rclcpp::sleep_for(std::chrono::milliseconds(100));
-        }
-
-        // Stop the robot after 2 seconds
-        vel_msg_.linear.x = 0.0;
-        publisher_->publish(vel_msg_);
-
-        RCLCPP_INFO(this->get_logger(), "Robot moved forward for 2 seconds");
-    }
-
 private:
 
     void back_dock(const sensor_msgs::msg::JointState::SharedPtr enc){
