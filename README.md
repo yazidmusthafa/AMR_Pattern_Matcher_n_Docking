@@ -1,5 +1,5 @@
 # Pattern Matching and Reverse Docking
-## - Working Sequence:
+## - Working Sequence
     1. The Pattern Matching and Reverse Docking is intitiated when the initialization msg is published in a topic using the command "ros2 topic pub --once /initialize_charging std_msgs/msg/Bool data:\ true\ ".
     2. Now a goal pose (predetermined pose near the charging dock) is send to the Nav2 Action Server "navigate_to_pose".
     3. When the robot reach the Goal successfully, the Pattern Matching is started by sending an initialization msg to the action server created for Pattern Matching in the PatternMatcherNode.
