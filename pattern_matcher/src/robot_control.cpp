@@ -67,8 +67,6 @@ public:
 
         // Action Servers:    /pattern_match: matcher_action_interfaces/action/Matcher
 
-        
-        
     }
 
 private:
