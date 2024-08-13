@@ -585,11 +585,11 @@ class PatternMatcherNode : public rclcpp::Node
 int main(int argc, char **argv)
 {
     rclcpp::init(argc, argv);
-    auto scan_to_pointcloud_node = std::make_shared<RobotControlNode>();
+    auto robot_control_node = std::make_shared<RobotControlNode>();
     auto pattern_matcher_node = std::make_shared<PatternMatcherNode>();
 
     rclcpp::executors::MultiThreadedExecutor executor;
-    executor.add_node(scan_to_pointcloud_node);
+    executor.add_node(robot_control_node);
     executor.add_node(pattern_matcher_node);
 
     executor.spin();
