@@ -1,0 +1,16 @@
+<library path="diff_drive">
+  <class name="diff_drive/RobotSystem"
+         type="diff_drive::RobotSystem"
+         base_class_type="hardware_interface::SystemInterface">
+    <description>
+      Robot hardware plugin for 6 dof robot tutorial.
+    </description>
+  </class>
+  <class name="diff_drive/RobotController"
+         type="diff_drive::RobotController"
+         base_class_type="controller_interface::ControllerInterface">
+    <description>
+      Robot controller plugin for 6 dof robot tutorial.
+    </description>
+  </class>
+</library>

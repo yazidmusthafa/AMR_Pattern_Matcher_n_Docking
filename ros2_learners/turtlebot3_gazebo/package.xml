@@ -24,5 +24,6 @@
   <export>
     <build_type>ament_cmake</build_type>
     <gazebo_ros gazebo_model_path="${prefix}/models"/>
+    <!-- <gazebo_ros gazebo_model_path="/home/yazidmusthafa/turtlebot3_ws/install/turtlebot3_gazebo/share/turtlebot3_gazebo/models"/> -->
   </export>
 </package>
