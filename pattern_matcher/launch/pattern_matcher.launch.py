@@ -13,7 +13,7 @@ from launch_ros.parameter_descriptions import ParameterValue
 
 def generate_launch_description():
     # Directories for included launch files
-    config_dir = os.path.join(get_package_share_directory('navigation_tb3'),'config')
+    config_dir = os.path.join(get_package_share_directory('pattern_matcher'),'config')
     map_file = os.path.join(config_dir,'room_map.yaml')
     param_file = os.path.join(config_dir,'tb3_nav2_params.yaml')
 
@@ -31,14 +31,15 @@ def generate_launch_description():
 
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource([os.path.join(
-            get_package_share_directory('turtlebot3_gazebo'), 'launch'), '/turtlebot3_room.launch.py'])
+            get_package_share_directory('diff_drive'), 'launch'), '/ros2_control.launch.py'])
         ),
 
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource([get_package_share_directory('nav2_bringup'),'/launch','/bringup_launch.py']),
             launch_arguments={
             'map':map_file,
-            'params_file': param_file}.items(),
+            'params_file': param_file,}.items(),
+            
 
         ),
 
@@ -71,14 +72,14 @@ def generate_launch_description():
         ]),
 
         # RViz
-        Node(
-            package="rviz2",
-            executable="rviz2",
-            name="rviz2",
-            output="log",
-            arguments=["-d", rviz_config],
+        # Node(
+        #     package="rviz2",
+        #     executable="rviz2",
+        #     name="rviz2",
+        #     output="log",
+        #     arguments=["-d", rviz_config],
 
-        ),
+        # ),
 
         Node(
             package="pattern_matcher",

@@ -13,6 +13,8 @@
     <xacro:diff_drive_ros2_control
     name="DiffBot" use_mock_hardware="$(arg use_mock_hardware)"/>
 
+    <xacro:include filename="lidar.xacro" />
+
     <!-- Include Gazebo Parameters -->
     <xacro:include filename="$(find diff_drive)/config/diff_drive_gazebo.xacro" />
 

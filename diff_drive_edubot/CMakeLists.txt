@@ -54,7 +54,7 @@ install(TARGETS diff_drive
 #   DESTINATION lib/${PROJECT_NAME}) 
 
 install(
-  DIRECTORY config launch src urdf meshes
+  DIRECTORY config launch src urdf meshes worlds
   DESTINATION share/${PROJECT_NAME})
 install(DIRECTORY config DESTINATION share/${PROJECT_NAME})
 

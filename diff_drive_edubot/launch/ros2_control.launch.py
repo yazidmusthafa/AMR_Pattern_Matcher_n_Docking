@@ -16,7 +16,7 @@
 import os
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, RegisterEventHandler, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, RegisterEventHandler, IncludeLaunchDescription, SetEnvironmentVariable, AppendEnvironmentVariable
 from launch.conditions import IfCondition
 from launch.event_handlers import OnProcessExit
 from launch.substitutions import Command, FindExecutable, PathJoinSubstitution, LaunchConfiguration
@@ -31,6 +31,8 @@ def generate_launch_description():
 
     # ros2 run turtlebot3_teleop teleop_keyboard --ros-args --remap /cmd_vel:=/diffbot_base_controller/cmd_vel_unstamped
 
+    pkg_path_diff_drive = get_package_share_directory('diff_drive')
+
     # Declare arguments
     declared_arguments = []
 
@@ -42,15 +44,21 @@ def generate_launch_description():
         )
     )
 
-    gazebo_params_file = os.path.join(get_package_share_directory('diff_drive'),'config','gazebo_params.yaml')
+    gazebo_params_file = os.path.join(pkg_path_diff_drive,'config','gazebo_params.yaml')
 
     # Initialize Arguments
     use_mock_hardware = LaunchConfiguration("use_mock_hardware")
 
+    world = os.path.join(
+        pkg_path_diff_drive,
+        'worlds',
+        'turtlebot3_room.world'
+    )
+
     gazebo = IncludeLaunchDescription(
                 PythonLaunchDescriptionSource([os.path.join(
                     get_package_share_directory('gazebo_ros'), 'launch', 'gazebo.launch.py')]),
-                    launch_arguments={'extra_gazebo_args': '--ros-args --params-file ' + gazebo_params_file}.items()
+                    launch_arguments={'extra_gazebo_args': '--ros-args --params-file ' + gazebo_params_file, 'world': world}.items()
              )
 
     # Get URDF via xacro
@@ -75,9 +83,11 @@ def generate_launch_description():
             "ros2_controllers.yaml",
         ]
     )
-    rviz_config_file = PathJoinSubstitution(
-        [FindPackageShare("diff_drive"), "config", "diffbot.rviz"]
-    )
+    # rviz_config_file = PathJoinSubstitution(
+    #     [FindPackageShare("diff_drive"), "config", "diffbot.rviz"]
+    # )
+
+    rviz_config_file = (get_package_share_directory("pattern_matcher") + "/config/rviz.rviz")
 
     # control_node = Node(
     #     package="controller_manager",
@@ -129,8 +139,11 @@ def generate_launch_description():
     )
 
     spawn_robot = Node(package='gazebo_ros', executable='spawn_entity.py',
-                        arguments=['-entity', 'humanoid_double_arm',
+                        arguments=['-entity', 'education_bot',
                                    '-topic', '/robot_description',
+                                   '-x', '0.0',
+                                   '-y', '0.0',
+                                   '-z', '0.01'
                                   ],
                         output='screen',
     )
@@ -162,4 +175,15 @@ def generate_launch_description():
         delay_joint_state_broadcaster_after_robot_controller_spawner,
     ]
 
-    return LaunchDescription(declared_arguments + nodes)
+    return LaunchDescription(declared_arguments + nodes 
+                             
+                            #  +
+
+                            #  [AppendEnvironmentVariable(
+                            #     name='GAZEBO_MODEL_PATH',
+                            #     value=os.path.join(pkg_path_diff_drive, "meshes")),
+
+                            #     SetEnvironmentVariable(
+                            #     name='GAZEBO_RESOURCE_PATH',
+                            #     value="/usr/share/gazebo-11:" + os.path.join(pkg_path_diff_drive, "worlds")),]
+                                )
