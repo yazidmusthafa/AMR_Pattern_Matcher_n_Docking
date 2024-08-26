@@ -104,7 +104,7 @@ def generate_launch_description():
         parameters=[robot_controllers],
         output="both",
         remappings=[
-            # ("/diffbot_base_controller/cmd_vel_unstamped", "/cmd_vel"),                      ## The unstamped cmd_vel is mapped to normal due to some issues.
+            ("/diffbot_base_controller/cmd_vel_unstamped", "/cmd_vel"),                      ## The unstamped cmd_vel is mapped to normal due to some issues.
             # ("/diffbot_base_controller/odom", "/odom"),
             # ("/diffbot_base_controller/transition_event", "/transition_event"),
             ("/controller_manager/robot_description", "/robot_description")
@@ -151,8 +151,8 @@ def generate_launch_description():
     # Delay rviz start after `joint_state_broadcaster`
     delay_rviz_after_joint_state_broadcaster_spawner = RegisterEventHandler(
         event_handler=OnProcessExit(
-            target_action=joint_state_broadcaster_spawner,
-            on_exit=[rviz_node],
+            target_action=spawn_robot,
+            on_exit=[joint_state_broadcaster_spawner],
         )
     )
 
@@ -160,8 +160,8 @@ def generate_launch_description():
     # TODO(anyone): This is a workaround for flaky tests. Remove when fixed.
     delay_joint_state_broadcaster_after_robot_controller_spawner = RegisterEventHandler(
         event_handler=OnProcessExit(
-            target_action=robot_controller_spawner,
-            on_exit=[joint_state_broadcaster_spawner],
+            target_action=joint_state_broadcaster_spawner,
+            on_exit=[robot_controller_spawner],
         )
     )
 
@@ -170,7 +170,9 @@ def generate_launch_description():
         spawn_robot,
         # control_node,
         robot_state_pub_node,
-        robot_controller_spawner,
+        # robot_controller_spawner,
+        rviz_node,
+        # joint_state_broadcaster_spawner,
         delay_rviz_after_joint_state_broadcaster_spawner,
         delay_joint_state_broadcaster_after_robot_controller_spawner,
     ]

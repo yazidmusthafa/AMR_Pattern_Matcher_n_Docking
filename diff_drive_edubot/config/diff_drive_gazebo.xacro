@@ -8,6 +8,10 @@
         <robot_param_node>robot_state_publisher</robot_param_node>
         <parameters>$(find diff_drive)/config/ros2_controllers.yaml</parameters>
         <parameters>$(find diff_drive)/config/gz_use_sim.yaml</parameters>
+        <ros>
+          <remapping>/diffbot_base_controller/cmd_vel_unstamped:=/cmd_vel</remapping>
+          <remapping>/diffbot_base_controller/odom:=/odom</remapping>
+        </ros>
       </plugin>
     </gazebo>
 

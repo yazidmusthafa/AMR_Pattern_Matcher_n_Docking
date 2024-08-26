@@ -335,7 +335,7 @@ class PatternMatcherNode : public rclcpp::Node
             float angle = scan_msg->angle_min;
             for (const auto &range : scan_msg->ranges)
             {
-                if (range >= scan_msg->range_min && range <= 1.55)
+                if (range >= scan_msg->range_min && range <= 6.02139)
                 {
                     pcl::PointXYZ point;
                     point.x = range * std::cos(angle);
