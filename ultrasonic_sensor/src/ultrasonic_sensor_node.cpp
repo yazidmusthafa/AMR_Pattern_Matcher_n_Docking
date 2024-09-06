@@ -56,8 +56,8 @@ private:
     {
         unsigned char request_command = 0xFF;
 
-        while (true){
-            serial_device->FlushIOBuffers();
+        while (rclcpp::ok()){
+            // serial_device->FlushIOBuffers();
             // RCLCPP_INFO(this->get_logger(), "getting in %i", i);
 
             std::string request_command_str(1, request_command);
@@ -93,7 +93,7 @@ private:
     void publish_sensor_data(){
 
         auto message = custom_msgs::msg::UltrasonicSensorData();
-        while (true){
+        while (rclcpp::ok()){
             sensor_data_ready = true;
             for (const auto& item : sensor_data.items()) {
                 // Check if any value is null
@@ -104,10 +104,10 @@ private:
             }
             if (sensor_data_ready){
                 message.data  = sensor_data.dump();
-                auto now = std::chrono::system_clock::now();
-                auto duration = now.time_since_epoch();
-                auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
-                RCLCPP_INFO(this->get_logger(), "Time: %ld ms, Sensor Data: %s ", millis, message.data.c_str());
+                // auto now = std::chrono::system_clock::now();
+                // auto duration = now.time_since_epoch();
+                // auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
+                // RCLCPP_INFO(this->get_logger(), "Time: %ld ms, Sensor Data: %s ", millis, message.data.c_str());
                 sensor_data_pub_->publish(message);
                 for (int i = 0; i < 6; ++i) {
                     sensor_data["sensor" + std::to_string(i)] = nullptr;  // Using -1 to signify no data
@@ -126,7 +126,6 @@ private:
     }
 
     rclcpp::Publisher<custom_msgs::msg::UltrasonicSensorData>::SharedPtr sensor_data_pub_;
-    rclcpp::TimerBase::SharedPtr timer_;
     std::vector<std::thread> threads_;
     std::string SERIAL_PORTS[6] = {"/dev/ttyCH9344USB0", "/dev/ttyCH9344USB1", "/dev/ttyCH9344USB2", "/dev/ttyCH9344USB3", "/dev/ttyCH9344USB4", "/dev/ttyCH9344USB5"};
     std::mutex mutex_;  // Mutex to ensure thread safety
@@ -146,12 +145,7 @@ int main(int argc, char *argv[])
 
     auto node = std::make_shared<SensorNode>();
 
-    // Create a MultiThreadedExecutor with 7 threads
-    rclcpp::executors::MultiThreadedExecutor executor(rclcpp::ExecutorOptions(), 7);
-    executor.add_node(node);
-
-    // Spin with multiple threads
-    executor.spin();
+    rclcpp::spin(node);
 
     rclcpp::shutdown();
     return 0;
