@@ -1,0 +1,2 @@
+# UltrasonicSensorData.msg
+string data
