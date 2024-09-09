@@ -1,4 +1,6 @@
 #include <libserial/SerialPort.h>
+// #include <serial.h>
+#include <exception>
 #include <map>
 #include <condition_variable>
 #include "rclcpp/rclcpp.hpp"
@@ -57,7 +59,7 @@ private:
         unsigned char request_command = 0xFF;
 
         while (rclcpp::ok()){
-            // serial_device->FlushIOBuffers();
+            serial_device->FlushIOBuffers();
             // RCLCPP_INFO(this->get_logger(), "getting in %i", i);
 
             std::string request_command_str(1, request_command);
@@ -65,24 +67,35 @@ private:
 
             // Read data from the sensor
             std::vector<unsigned char> buffer(4);
-            serial_device->Read(buffer, buffer.size());
 
-            if (buffer.size() >= 4) {
-                // Verify checksum
-                unsigned char calculated_checksum = (buffer[0] + buffer[1] + buffer[2]) & 0xFF;
-                if (calculated_checksum == buffer[3]) {
-                    // Process distance
+            try{
+                serial_device->Read(buffer, buffer.size(), TIMEOUT);
 
-                    double distance = (buffer[1] << 8) + buffer[2];
-                    
-                    std::lock_guard<std::mutex> lock(mutex_);
+                if (buffer.size() >= 4) {
+                    // Verify checksum
+                    unsigned char calculated_checksum = (buffer[0] + buffer[1] + buffer[2]) & 0xFF;
+                    if (calculated_checksum == buffer[3]) {
+                        // Process distance
 
-                    sensor_data["sensor" + std::to_string(i)] = distance;
-                    // RCLCPP_INFO(this->get_logger(), "Time: %ld ms, Distance: %f mm", millis, distance);
-                    
-                } else {
-                    std::cerr << "Checksum mismatch" << std::endl;
+                        double distance = (buffer[1] << 8) + buffer[2];
+                        
+                        std::lock_guard<std::mutex> lock(mutex_);
+
+                        sensor_data["sensor" + std::to_string(i)] = distance;
+                        
+                        // if (i == 0){
+                        //     RCLCPP_INFO(this->get_logger(), "Distance: %f mm", distance);
+                        // }
+
+                    } else {
+                        std::cerr << "Checksum mismatch" << std::endl;
+                    }
                 }
+            }catch (const LibSerial::ReadTimeout& e) {
+                std::lock_guard<std::mutex> lock(mutex_);
+                sensor_data["sensor" + std::to_string(i)] = -1;
+                // Catch the ReadTimeout exception and handle it
+                std::cerr << "Error: Read timeout occurred! at: sensor" << i << std::endl;
             }
         }
         
@@ -93,8 +106,11 @@ private:
     void publish_sensor_data(){
 
         auto message = custom_msgs::msg::UltrasonicSensorData();
+        // auto start = std::chrono::steady_clock::now();
         while (rclcpp::ok()){
             sensor_data_ready = true;
+            // auto now = std::chrono::steady_clock::now();
+            // auto elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
             for (const auto& item : sensor_data.items()) {
                 // Check if any value is null
                 if (item.value().is_null()) {
@@ -102,17 +118,19 @@ private:
                     break;
                 }
             }
+            
             if (sensor_data_ready){
                 message.data  = sensor_data.dump();
-                // auto now = std::chrono::system_clock::now();
-                // auto duration = now.time_since_epoch();
-                // auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
                 // RCLCPP_INFO(this->get_logger(), "Time: %ld ms, Sensor Data: %s ", millis, message.data.c_str());
                 sensor_data_pub_->publish(message);
                 for (int i = 0; i < 6; ++i) {
                     sensor_data["sensor" + std::to_string(i)] = nullptr;  // Using -1 to signify no data
                 }
             }
+
+            // RCLCPP_INFO(this->get_logger(), "Data_count: %i , Data_exp_count: %i ", data_count, data_exp_count);
+            
+
         }
     }
 
@@ -130,7 +148,7 @@ private:
     std::string SERIAL_PORTS[6] = {"/dev/ttyCH9344USB0", "/dev/ttyCH9344USB1", "/dev/ttyCH9344USB2", "/dev/ttyCH9344USB3", "/dev/ttyCH9344USB4", "/dev/ttyCH9344USB5"};
     std::mutex mutex_;  // Mutex to ensure thread safety
     LibSerial::BaudRate BAUDRATE = LibSerial::BaudRate::BAUD_115200;
-    const int TIMEOUT = 2000;  // Timeout for serial reading in seconds
+    const int TIMEOUT = 111;  // Timeout for serial reading in seconds
     int timeout_ms_;
     std::vector<std::unique_ptr<LibSerial::SerialPort>> serial_conn_;
     nlohmann::json sensor_data;  // Map to store sensor data
