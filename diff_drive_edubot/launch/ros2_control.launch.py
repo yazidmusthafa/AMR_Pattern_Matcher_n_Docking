@@ -105,8 +105,8 @@ def generate_launch_description():
         output="both",
         remappings=[
             ("/diffbot_base_controller/cmd_vel_unstamped", "/cmd_vel"),                      ## The unstamped cmd_vel is mapped to normal due to some issues.
+            ("/tf", "/diffbot_base_controller/tf"), 
             # ("/diffbot_base_controller/odom", "/odom"),
-            # ("/diffbot_base_controller/transition_event", "/transition_event"),
             ("/controller_manager/robot_description", "/robot_description")
         ],
     )

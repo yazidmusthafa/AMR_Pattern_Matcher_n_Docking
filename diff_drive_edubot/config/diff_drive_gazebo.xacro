@@ -10,7 +10,8 @@
         <parameters>$(find diff_drive)/config/gz_use_sim.yaml</parameters>
         <ros>
           <remapping>/diffbot_base_controller/cmd_vel_unstamped:=/cmd_vel</remapping>
-          <remapping>/diffbot_base_controller/odom:=/odom</remapping>
+          <remapping>/tf:=/diffbot_base_controller/tf</remapping>
+          <!-- <remapping>/diffbot_base_controller/odom:=/odom</remapping> -->
         </ros>
       </plugin>
     </gazebo>
