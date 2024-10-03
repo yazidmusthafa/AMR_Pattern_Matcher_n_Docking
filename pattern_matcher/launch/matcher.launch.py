@@ -72,9 +72,9 @@ def generate_launch_description():
         ),
 
         Node(
-            name="scan_to_pointcloud_node",
+            name="patterm_matcher_node",
             package="pattern_matcher",
-            executable="scan_to_pointcloud_node",
+            executable="robot_control",
             output="screen",
             parameters=[
                 {"use_sim_time": True}

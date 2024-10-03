@@ -1,2 +1,0 @@
-# UltrasonicSensorData.msg
-string data
