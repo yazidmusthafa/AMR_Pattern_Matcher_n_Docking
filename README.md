@@ -1,6 +1,6 @@
 # Pattern Matching and Reverse Docking
 
-![Pattern Matcher](Pattern_Matcher.png)
+![Pattern Matcher](Pattern_Matching.png)
 
 ## - Working Sequence
   1. The Pattern Matching and Reverse Docking is intitiated when the initialization msg is published in a topic using the command "ros2 topic pub --once /initialize_charging std_msgs/msg/Bool data:\ true\ ".
